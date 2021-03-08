@@ -15,14 +15,15 @@ ext {
     junitVersion = '5.7.0'
     ewahVersion = '1.1.7'
     guavaVersion = '30.1-jre'
-    kotlinVersion = '1.4.2'
+    kotlinVersion = '1.4.31'
+    kotlinCoroutinesVersion = '1.4.3'
 
     isCiServer = System.getenv().containsKey("CI")
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:${kotlinVersion}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:${kotlinCoroutinesVersion}"
     implementation "org.jetbrains.kotlin:kotlin-reflect"
 
     implementation "com.googlecode.javaewah:JavaEWAH:${ewahVersion}"

@@ -4,7 +4,11 @@ import com.googlecode.javaewah32.EWAHCompressedBitmap32
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+//a set of filenames
 typealias UserIndexEntry = HashSet<String>
+
+//map file->map line->list offsets
+typealias RichUserIndexEntry = HashMap<String, Map<Int, List<Int>>>
 
 //@todo experiment on live data for 32-bit vs 64-bit decision
 //  preliminary analysis suggests we prefer 32-bit due to smaller footprint
@@ -35,6 +39,16 @@ internal fun Logger.debugIfEnabled(messageSupplier: () -> String) {
     if (isDebugEnabled) {
         debug(messageSupplier())
     }
+}
+
+fun String.indicesOf(substring: String): List<Int> {
+    val result = mutableListOf<Int>()
+    var start = 0
+    while (run {start = indexOf(substring, start); start } > -1) {
+        result.add(start)
+        start++
+    }
+    return result
 }
 
 //grabbed from https://www.reddit.com/r/Kotlin/comments/8gbiul/slf4j_loggers_in_3_ways/

@@ -1,9 +1,11 @@
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.maurezen.indexer.Index
 import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.NGram.Companion.ngram
 import org.maurezen.indexer.impl.NGram.Companion.ngramReverse
+import org.maurezen.indexer.impl.coroutines.IndexBuilderCoroutines
 import org.maurezen.indexer.impl.multithreaded.IndexBuilderParallel
 import org.maurezen.indexer.impl.naive.IndexBuilderNaive
 import java.io.File
@@ -63,6 +65,10 @@ class NaiveHappyTests {
         IndexBuilderParallel(n).with(readTestFiles().keys).buildFuture()
     }
 
+    private fun readAndIndexTestFilesCoroutines(): Index = runBlocking {
+        IndexBuilderCoroutines(n).with(readTestFiles().keys).buildAsync().await()
+    }
+
     @Test
     fun readsTestFileAndBuildsIndexAndLookups() {
         readsAndPrintsTestFile()
@@ -99,8 +105,12 @@ class NaiveHappyTests {
         )
     }
 
+    private fun compareResultToExpectation(entry: RichUserIndexEntry, expected: String, pattern: String) {
+        assert(entry.postSorted() == expected) { "We expect '$pattern' query return \n$expected\n, got \n${entry.postSorted()}\n instead" }
+    }
+
     private fun compareResultToExpectation(entry: UserIndexEntry, expected: String, pattern: String) {
-        assert(entry.post() == expected) { "We expect '$pattern' query return \n$expected\n, got \n${entry.post()}\n instead" }
+        assert(entry.postSorted() == expected) { "We expect '$pattern' query return \n$expected\n, got \n${entry.postSorted()}\n instead" }
     }
 
     @Test
@@ -160,6 +170,34 @@ class NaiveHappyTests {
     }
 
     @Test
+    fun readsTwoFilesAndBuildsIndicesCoroutinesAndScansAndLookups() = runBlocking {
+        val index = readAndIndexTestFilesCoroutines()
+
+        println(index.stats())
+
+        val would = "Would"
+        compareResultToExpectation(
+            index.queryAndScan(would),
+            "{${File(filename).absolutePath}={1=[0]}}",
+            would
+        )
+
+        val _ha = " ha"
+        compareResultToExpectation(
+            index.queryAndScan(_ha),
+            "{${File(filename).absolutePath}={1=[32], 3=[2], 4=[13]}}",
+            _ha
+        )
+
+        val tincidunt = "tincidunt"
+        compareResultToExpectation(
+            index.queryAndScan(tincidunt),
+            "{${File(filenames[1]).absolutePath}={7=[0]}, ${File(filenames[0]).absolutePath}={15=[0], 16=[0, 40]}}",
+            tincidunt
+        )
+    }
+
+    @Test
     fun indexQueryIsIdempotent() {
         readsAndPrintsTestFile()
         val index = readAndIndexTestFile()
@@ -169,26 +207,26 @@ class NaiveHappyTests {
         val would = "Would"
         compareResultToExpectation(
             index.query(would),
-            index.query(would).post(),
+            index.query(would).postSorted(),
             would
         )
 
         val _ha = " ha"
         compareResultToExpectation(
             index.query(_ha),
-            index.query(_ha).post(),
+            index.query(_ha).postSorted(),
             _ha
         )
 
         val tincidunt = "tincidunt"
         compareResultToExpectation(
             index.query(tincidunt),
-            index.query(tincidunt).post(),
+            index.query(tincidunt).postSorted(),
             tincidunt
         )
     }
 
-    private fun UserIndexEntry.post(): String {
+    private fun UserIndexEntry.postSorted(): String {
         val i = this.sorted().iterator()
         if (!i.hasNext()) return "{}"
         val sb = StringBuilder()
@@ -201,4 +239,20 @@ class NaiveHappyTests {
         }
     }
 
+    private fun RichUserIndexEntry.postSorted(): String {
+        val i = this.entries.sortedBy { entry -> entry.key }.iterator()
+        if (!i.hasNext()) return "{}"
+        val sb = StringBuilder()
+        sb.append('{')
+        while (true) {
+            val e = i.next()
+            val key = e.key
+            val value = e.value
+            sb.append(key)
+            sb.append('=')
+            sb.append(if (value === this) "(this Map)" else value)
+            if (!i.hasNext()) return sb.append('}').toString()
+            sb.append(',').append(' ')
+        }
+    }
 }

@@ -1,24 +1,22 @@
-import org.junit.jupiter.api.RepeatedTest
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
-import org.maurezen.indexer.Index
-import org.maurezen.indexer.impl.multithreaded.IndexBuilderParallel
-import org.maurezen.indexer.impl.naive.IndexBuilderNaive
-import java.io.File
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.random.Random
 import kotlinx.coroutines.*
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
+import org.maurezen.indexer.Index
 import org.maurezen.indexer.State
 import org.maurezen.indexer.Stats
 import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.coroutines.IndexBuilderCoroutines
+import org.maurezen.indexer.impl.multithreaded.IndexBuilderParallel
+import org.maurezen.indexer.impl.naive.IndexBuilderNaive
 import org.maurezen.indexer.impl.naive.buildStats
+import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.IntConsumer
 import java.util.stream.IntStream
+import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
 private const val fuzzyTestIterations = 20
@@ -40,7 +38,7 @@ class MultithreadedTest {
     private val maxQuerySize = 10
 
     @RepeatedTest(fuzzyTestIterations)
-    fun naiveAndNaiveParallelYieldSameResults() = runBlocking {
+    fun naiveAndParallelYieldSameResults() = runBlocking {
         assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
 
         val (filenames,seed) = generateRandomDatafiles(prefix)
@@ -52,7 +50,7 @@ class MultithreadedTest {
     }
 
     @RepeatedTest(fuzzyTestIterations)
-    fun naiveAndNaiveParallelYieldSameResultsCoroutines() = runBlocking {
+    fun naiveAndParallelYieldSameResultsCoroutines() = runBlocking {
         assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
 
         val (filenames,seed) = generateRandomDatafiles(prefix)
@@ -66,7 +64,7 @@ class MultithreadedTest {
     }
 
     @RepeatedTest(fuzzyTestIterations)
-    fun naiveAndNaiveCoroutineYieldSameResults() = runBlocking {
+    fun naiveAndCoroutineYieldSameResults() = runBlocking {
         assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
 
         val (filenames,seed) = generateRandomDatafiles(prefix)
@@ -80,7 +78,7 @@ class MultithreadedTest {
     }
 
     @RepeatedTest(fuzzyTestIterations)
-    fun naiveAndNaiveCoroutineYieldSameResultsCoroutines() = runBlocking {
+    fun naiveAndCoroutineYieldSameResultsCoroutines() = runBlocking {
         assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
 
         val (filenames,seed) = generateRandomDatafiles(prefix)
@@ -141,7 +139,7 @@ class MultithreadedTest {
     }
 
     @Test
-    fun naiveCoroutineAsyncIsAsync() {
+    fun coroutineAsyncIsAsync() {
         assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
 
         val (filenames, _) = generateRandomDatafiles(prefix)
@@ -162,7 +160,7 @@ class MultithreadedTest {
     }
 
     @Test
-    fun naiveCoroutineIsCancelable() = runBlocking {
+    fun coroutineIsCancelable() = runBlocking {
         assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
 
         val (filenames, _) = generateRandomDatafiles(prefix)
@@ -179,17 +177,6 @@ class MultithreadedTest {
 
         assert(time < cancellationTimeoutMS) { "Time to cancel index building should be under $cancellationTimeoutMS ms, was $time instead" }
         assert(indexBuilderCoroutines.status() == State.INITIAL) { "we expect index builder to be in initial state after cancellation" }
-    }
-
-    @Test
-    fun cancellationPreservesIndexForNaiveCoroutine(): Unit = runBlocking {
-        assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
-
-        val (filenamesFirst,seedFirst) = generateRandomDatafiles(prefix)
-
-        val (filenamesSecond,seedSecond) = generateRandomDatafiles(prefix)
-
-        TODO("Not implemented yet")
     }
 
     @RepeatedTest(fuzzyTestIterations)
@@ -320,8 +307,8 @@ class MultithreadedTest {
     }
 
     private fun areResultsIdenticalForQuery(query: String, first: Index, second: Index, firstName: String, secondName: String, seed: Int): Boolean {
-        val resultFirst = first.query(query)
-        val resultSecond = second.query(query)
+        val resultFirst = first.queryAndScan(query)
+        val resultSecond = second.queryAndScan(query)
 
         if (resultFirst != resultSecond) {
             reportDifference(resultFirst, firstName, resultSecond, secondName, query, seed)
@@ -343,6 +330,10 @@ class MultithreadedTest {
     }
 
     private fun reportDifference(first: UserIndexEntry, firstName: String, second: UserIndexEntry, secondName: String, query: String, seed: Int) {
+        println("Result mismatch for seed $seed and query \"$query\": \n$firstName returned $first \n$secondName returned $second")
+    }
+
+    private fun reportDifference(first: RichUserIndexEntry, firstName: String, second: RichUserIndexEntry, secondName: String, query: String, seed: Int) {
         println("Result mismatch for seed $seed and query \"$query\": \n$firstName returned $first \n$secondName returned $second")
     }
 
