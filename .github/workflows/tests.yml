@@ -37,4 +37,4 @@ jobs:
         run: chmod +x gradlew
       
       - name: Build (including tests)
-        run: ./gradlew build
+        run: ./gradlew build --no-daemon --info
