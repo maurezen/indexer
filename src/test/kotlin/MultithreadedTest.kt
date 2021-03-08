@@ -29,7 +29,6 @@ private const val cancellationTimeoutMS = 1000
 
 private const val prefix = "MultithreadedTestFile"
 
-@Execution(ExecutionMode.CONCURRENT)
 class MultithreadedTest {
 
     private val n = 3

@@ -16,6 +16,8 @@ ext {
     ewahVersion = '1.1.7'
     guavaVersion = '30.1-jre'
     kotlinVersion = '1.4.2'
+
+    isCiServer = System.getenv().containsKey("CI")
 }
 
 dependencies {
@@ -39,6 +41,6 @@ compileTestKotlin {
 }
 
 test {
-    maxHeapSize = "32g"
+    maxHeapSize = isCiServer ? "6g" : "32g"
     useJUnitPlatform()
 }
