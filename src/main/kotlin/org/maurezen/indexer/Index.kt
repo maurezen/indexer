@@ -1,10 +1,13 @@
 package org.maurezen.indexer
 
+import org.maurezen.indexer.impl.RichUserIndexEntry
 import org.maurezen.indexer.impl.UserIndexEntry
 
 interface Index {
-    //@todo this is files only now that lines/positions are dropped. introduce an option to have lines/positions read from file(s).
+
     fun query(pattern: String): UserIndexEntry
+    fun queryAndScan(pattern: String): RichUserIndexEntry
+
     fun stats(): Stats
 }
 

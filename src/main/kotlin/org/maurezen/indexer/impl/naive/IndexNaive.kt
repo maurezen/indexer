@@ -2,15 +2,12 @@ package org.maurezen.indexer.impl.naive
 
 import org.maurezen.indexer.Index
 import org.maurezen.indexer.Stats
-import org.maurezen.indexer.impl.IndexEntry
+import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.NGram.Companion.ngram
-import org.maurezen.indexer.impl.UserIndexEntry
-import org.maurezen.indexer.impl.intersectImmutable
 import java.io.File
 
 /**
  * A ready-to-query inverse ngram index over some filenames.
- * Doesn't really know about fileset that it was fed, can only serve queries.
  *
  * Is basically a read-only snapshot. As such, works in multithreaded environment just fine.
  */
@@ -29,6 +26,10 @@ class IndexNaive (
         val matchesPerNGram = ngrams.mapTo(ArrayList(ngrams.size)) { ngram -> matches.getOrDefault(ngram, IndexEntry())}
 
         return materialize(intersection(matchesPerNGram))
+    }
+
+    override fun queryAndScan(pattern: String): RichUserIndexEntry {
+        return enrich(query(pattern), pattern)
     }
 
     override fun stats(): Stats = stats
@@ -54,6 +55,38 @@ class IndexNaive (
 
         return result
     }
+
+    private fun enrich(intersection: UserIndexEntry, query: String): RichUserIndexEntry {
+        val result = RichUserIndexEntry()
+
+        intersection.forEach { result[it] = scan(it, query) }
+
+        return result
+    }
+
+    private fun scan(filename: String, query: String, eol: CharSequence = defaultEOL): Map<Int, List<Int>> {
+        val strings = getFileContents(filename)
+
+        var line = 0
+        var offset = 0
+
+        val result: HashMap<Int, MutableList<Int>> = linkedMapOf()
+
+        strings.joinToString(defaultEOL).indicesOf(query).forEach {
+            while (it - offset > strings[line].length) {
+                offset += strings[line++].length + eol.length
+            }
+            result.computeIfAbsent(line) { mutableListOf() }
+            result[line]!!.add(it-offset)
+        }
+
+        return result
+    }
+
+    @Synchronized
+    //TODO make file scans multithreaded-environment-friendly
+    //TODO cache file scans
+    private fun getFileContents(filename: String) = read(filename)
 
     private fun buildStats(): Stats {
         val ngrams = matches.keys.size
@@ -95,6 +128,29 @@ fun UserIndexEntry.buildStats(): Stats {
 
     val filesQty = size
     val filenames = this
+    val sizeTotal = filenames.map(::File).map(File::length).sum()
+    val sizeMax = filenames.map(::File).map(File::length).maxOrNull() ?: 0L
+    val sizeAvg = sizeTotal*1.0 / filesQty
+
+    val linesMax = 42
+
+    val entriesTotal = size
+    val entriesPerNGramMax = size
+    val entriesPerNGramAvg = entriesTotal*1.0 / ngrams
+
+    val avgNGramsPerFile = 0.0
+
+    return Stats(
+        ngrams,
+        filesQty, sizeMax, sizeTotal, sizeAvg, linesMax, entriesTotal, entriesPerNGramMax, entriesPerNGramAvg, avgNGramsPerFile, ""
+    )
+}
+
+fun RichUserIndexEntry.buildStats(): Stats {
+    val ngrams = 1
+
+    val filesQty = size
+    val filenames = this.keys
     val sizeTotal = filenames.map(::File).map(File::length).sum()
     val sizeMax = filenames.map(::File).map(File::length).maxOrNull() ?: 0L
     val sizeAvg = sizeTotal*1.0 / filesQty
