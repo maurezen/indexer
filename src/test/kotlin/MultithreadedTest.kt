@@ -1,6 +1,8 @@
 import kotlinx.coroutines.*
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.maurezen.indexer.Index
 import org.maurezen.indexer.State
 import org.maurezen.indexer.Stats
@@ -10,12 +12,15 @@ import org.maurezen.indexer.impl.multithreaded.IndexBuilderParallel
 import org.maurezen.indexer.impl.naive.IndexBuilderNaive
 import org.maurezen.indexer.impl.naive.buildStats
 import java.io.File
+import java.lang.String.format
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.IntConsumer
 import java.util.stream.IntStream
+import kotlin.math.ceil
+import kotlin.math.log10
 import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
@@ -192,11 +197,18 @@ class MultithreadedTest {
     @RepeatedTest(fuzzyTestIterations)
     fun generateRandomDataFilesInADirIsDeterministicBasedOnSeed() {
         val prefix = "generateRandomDataFilesInADirIsDeterministicBasedOnSeed"
-        val (firstDir, seed) = generateRandomDatafilesInADir(prefix)
+        val seed: Int = Random.nextInt()
 
-        val secondDir = generateRandomDatafilesInADir(prefix, seed)
+        compareRandomDatafilesForSeed(prefix, seed)
+    }
 
-        assert(compareFilesets(firstDir, secondDir)) {"Two datasets created on the same seed $seed should be equal"}
+    /**
+     * Tests the seeds that we had reproducible failures for
+     */
+    @ParameterizedTest
+    @ValueSource(ints = [-685560897, -838403338])
+    fun generateDataFilesInADirIsDeterministicBasedOnFailedSeeds(seed: Int) {
+        compareRandomDatafilesForSeed("generateDataFilesInADirIsDeterministicBasedOnSeed", seed)
     }
 
     @RepeatedTest(fuzzyTestIterations)
@@ -212,6 +224,13 @@ class MultithreadedTest {
         val firstString = generateRandomString(firstRandom, firstLength)
         val secondString = generateRandomString(secondRandom, secondLength)
         assert(firstLength == secondLength) { "For seed {$seed} identical strings should have been generated. Got QUOTE\n{$firstString}\nUNQUOTE and QUOTE{$secondString}\nUNQUOTE instead" }
+    }
+
+    private fun compareRandomDatafilesForSeed(prefix: String, seed: Int) {
+        val firstDir = generateRandomDatafilesInADir(prefix, seed)
+        val secondDir = generateRandomDatafilesInADir(prefix, seed)
+
+        compareFilesets(firstDir, secondDir, seed)
     }
 
     private fun compareFilesets(firstFilenames: List<String>, secondFilenames: List<String>): Boolean {
@@ -230,30 +249,30 @@ class MultithreadedTest {
         return true
     }
 
-    private fun compareFilesets(firstDir: String, secondDir: String): Boolean {
+    private fun compareFilesets(firstDir: String, secondDir: String, seed: Int) {
         val first = File(firstDir)
         val second = File(secondDir)
 
-        assert (first.isDirectory) { "We expect $firstDir to be a directory"}
-        assert (second.isDirectory) { "We expect $secondDir to be a directory"}
+        assert (first.isDirectory) { "For seed $seed we expect $firstDir to be a directory"}
+        assert (second.isDirectory) { "For seed $seed we expect $secondDir to be a directory"}
 
         val firstFiles = first.listFiles()!!
         val secondFiles = second.listFiles()!!
-        if (firstFiles.size != secondFiles.size) {
-            return false
-        } else {
-            firstFiles.sortBy(File::length)
-            secondFiles.sortBy(File::length)
-            firstFiles.zip(secondFiles).forEach {
-                val firstLines = read(it.first.absolutePath)
-                val secondLines = read(it.second.absolutePath)
 
-                if (firstLines != secondLines) {
-                    return false
-                }
-            }
+        assert(firstFiles.size == secondFiles.size) {"For seed $seed we expect to have the same amount of files, not ${firstFiles.size} and ${secondFiles.size}"}
+
+        firstFiles.sortBy(File::getName)
+        secondFiles.sortBy(File::getName)
+
+        firstFiles.zip(secondFiles).forEach {
+            assert( it.first.length() == it.second.length()) { "For seed $seed we expect \n${it.first.absolutePath}\n and \n${it.second.absolutePath}\n have equal size, got ${it.first.length()} and ${it.second.length()} instead. \n Overall, we have file sizes (in bytes) as follows: \n${firstFiles.map(File::length)}\n for the first set and \n${secondFiles.map(File::length)}\n for the second set" }
+
+            val firstLines = read(it.first.absolutePath)
+            val secondLines = read(it.second.absolutePath)
+
+            assert(firstLines.size == secondLines.size) { "For seed $seed we expect \n${it.first.absolutePath}\n and \n${it.second.absolutePath}\n have equal amount of lines, got ${firstLines.size} and ${secondLines.size} instead. \n Overall, we have file sizes (in lines) as follows: \n${firstFiles.map(File::lines)}\n for the first set and \n${secondFiles.map(File::lines)}\n for the second set" }
+            assert(firstLines == secondLines) {"For seed $seed we expect \n${it.first.absolutePath}\n and \n${it.second.absolutePath}\n have equal contents, got \n${firstLines.joinToString("\n")}\nand\n${secondLines.joinToString("\n")}\ninstead"}
         }
-        return true
     }
 
     private suspend fun compareResultsParallel(first: Index, firstName: String, second: Index, secondName: String, seed: Int, failFast : Boolean = true): Boolean {
@@ -343,10 +362,11 @@ class MultithreadedTest {
         val filesQty = random.nextInt(maxFiles / 2, maxFiles + 1)
         val filenames: ArrayList<String> = arrayListOf()
 
+        val numerator = tempFileNumeratorTemplate(filesQty)
         repeat (filesQty) {
             val fileSize = random.nextInt(maxFileSize / 1024, maxFileSize + 1)
 
-            val file = File.createTempFile(prefix, "")
+            val file = File.createTempFile(prefix+format(numerator, it), "")
             filenames.add(file.absolutePath)
             file.setWritable(true)
             file.deleteOnExit()
@@ -365,10 +385,11 @@ class MultithreadedTest {
         val tempDir = Files.createTempDirectory(prefix).toFile()
         tempDir.deleteOnExit()
 
+        val numerator = tempFileNumeratorTemplate(filesQty)
         repeat (filesQty) {
             val fileSize = random.nextInt(maxFileSize / 1024, maxFileSize + 1)
 
-            val file = Files.createTempFile(tempDir.toPath(), prefix, "").toFile()
+            val file = Files.createTempFile(tempDir.toPath(), prefix+format(numerator, it), "").toFile()
             filenames.add(file.absolutePath)
             file.setWritable(true)
             file.deleteOnExit()
@@ -377,6 +398,8 @@ class MultithreadedTest {
 
         return tempDir.absolutePath
     }
+
+    private fun tempFileNumeratorTemplate(filesQty: Int) = "%0${ceil(log10(filesQty * 1.0)).toInt()}d_"
 
     private fun generateFileContents(file: File, fileSize: Int, random: Random) {
         file.bufferedWriter().use {
