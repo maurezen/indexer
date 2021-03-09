@@ -1,4 +1,5 @@
 import org.maurezen.indexer.impl.read
+import java.io.File
 
 class Locator {}
 
@@ -15,3 +16,7 @@ fun printStrings(list: List<String>) {
 fun readTestFile() = read(filename)
 fun readTestFiles() = read(filenames)
 fun readTestBinaryFile() = read(binaryFilename)
+
+fun File.lines(): Int {
+    return read(absolutePath).size
+}
