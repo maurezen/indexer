@@ -1,11 +1,11 @@
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.maurezen.indexer.Index
-import org.maurezen.indexer.YesMan
 import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.NGram.Companion.ngram
 import org.maurezen.indexer.impl.NGram.Companion.ngramReverse
 import org.maurezen.indexer.impl.coroutines.IndexBuilderCoroutines
+import org.maurezen.indexer.impl.inspection.YesMan
 import org.maurezen.indexer.impl.multithreaded.IndexBuilderParallel
 import org.maurezen.indexer.impl.naive.IndexBuilderNaive
 import java.io.File

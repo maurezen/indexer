@@ -1,5 +1,6 @@
 package org.maurezen.indexer.impl.naive
 
+import org.maurezen.indexer.FileReader
 import org.maurezen.indexer.Index
 import org.maurezen.indexer.Stats
 import org.maurezen.indexer.impl.*
@@ -15,7 +16,8 @@ class IndexNaive (
     private val n: Int,
     //map ngram -> bitmap file
     private val matches: HashMap<String, IndexEntry>,
-    private val filenames: ArrayList<String>
+    private val filenames: ArrayList<String>,
+    private val reader: FileReader
 ) : Index {
 
     private val stats: Stats by lazy { buildStats()}
@@ -86,7 +88,7 @@ class IndexNaive (
     @Synchronized
     //TODO make file scans multithreaded-environment-friendly
     //TODO cache file scans
-    private fun getFileContents(filename: String) = read(filename)
+    private fun getFileContents(filename: String) = reader.readAsList(filename)
 
     private fun buildStats(): Stats {
         val ngrams = matches.keys.size

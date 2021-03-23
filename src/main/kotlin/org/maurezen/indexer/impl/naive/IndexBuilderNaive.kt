@@ -5,6 +5,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import org.maurezen.indexer.*
 import org.maurezen.indexer.impl.ACCEPTS_EVERYTHING
+import org.maurezen.indexer.impl.FileReaderBasic
 import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
 import org.maurezen.indexer.impl.explodeFileRoots
 import org.maurezen.indexer.impl.inspection.YesMan
@@ -23,6 +24,7 @@ open class IndexBuilderNaive (
     val roots = ArrayList<String>()
     var filter = ACCEPTS_EVERYTHING
     var inspector: ContentInspector = YesMan
+    var reader: FileReader = FileReaderBasic()
 
     override fun with(filename: String): IndexBuilder {
         roots.add(filename.intern())
@@ -36,6 +38,11 @@ open class IndexBuilderNaive (
 
     override fun inspectedBy(inspector: ContentInspector): IndexBuilder {
         this.inspector = inspector
+        return this
+    }
+
+    override fun readBy(reader: FileReader): IndexBuilder {
+        this.reader = reader
         return this
     }
 
@@ -54,14 +61,17 @@ open class IndexBuilderNaive (
     override suspend fun buildFuture(): Future<Index> {
         currentIndex = if (roots.isNotEmpty()) {
             val filenames = explodeFileRoots(roots)
-            val fileMaps = filenames.mapIndexedTo(ArrayList()) { index, filename -> Pair(reverseNgramsForFile(filename, index, n), index) }
+            val fileMaps = filenames.mapIndexedTo(ArrayList()) { index, filename -> Pair(reverseNgramsForFile(filename,
+                index,
+                n,
+                reader = reader), index) }
 
             val matches = fileMaps.removeAt(0).first
             fileMaps.fold(matches) { acc, entry -> acc.mergeMapBitMap(entry.first) }
 
-            IndexNaive(n, matches, filenames)
+            IndexNaive(n, matches, filenames, reader)
         } else {
-            IndexNaive(n, hashMapOf(), arrayListOf())
+            IndexNaive(n, hashMapOf(), arrayListOf(), reader)
         }
 
         return CompletableFuture.completedFuture(currentIndex)

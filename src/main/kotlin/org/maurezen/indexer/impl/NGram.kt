@@ -1,6 +1,7 @@
 package org.maurezen.indexer.impl
 
 import org.maurezen.indexer.ContentInspector
+import org.maurezen.indexer.FileReader
 import org.maurezen.indexer.impl.inspection.YesMan
 
 class NGram {
@@ -72,12 +73,18 @@ class NGram {
             return ngram(strings, n, defaultEOL)
         }
 
-        fun reverseNgramsForFile(filename: String, targetIndex: Int, n: Int, inspector: ContentInspector = YesMan): HashMap<String, IndexEntry> {
+        fun reverseNgramsForFile(
+            filename: String,
+            targetIndex: Int,
+            n: Int,
+            inspector: ContentInspector = YesMan,
+            reader: FileReader
+        ): HashMap<String, IndexEntry> {
             //map ngram -> bitmap (with a single) file
             val matches: HashMap<String, IndexEntry> = hashMapOf()
 
             if (inspector.proceedOnFile(filename)) {
-                val strings = read(filename)
+                val strings = reader.readAsList(filename)
 
                 val ngrams = ngramReverse(strings, n, inspector, filename)
 
