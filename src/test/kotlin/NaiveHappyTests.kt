@@ -2,6 +2,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.maurezen.indexer.Index
+import org.maurezen.indexer.YesMan
 import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.NGram.Companion.ngram
 import org.maurezen.indexer.impl.NGram.Companion.ngramReverse
@@ -50,7 +51,7 @@ class NaiveHappyTests {
         val list = readTestFile()
 
         printStrings(list)
-        println(ngramReverse(list, n))
+        println(ngramReverse(list, n, YesMan, ""))
     }
 
     private fun readAndIndexTestFile(): Index = runBlocking {
