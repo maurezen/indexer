@@ -1,7 +1,7 @@
 package org.maurezen.indexer.impl
 
-import java.nio.file.Files
-import java.nio.file.Path
+import org.maurezen.indexer.ContentInspector
+import org.maurezen.indexer.YesMan
 
 class NGram {
     companion object {
@@ -34,12 +34,7 @@ class NGram {
         /**
          * Splits a list of strings into an ngram collection, being aware of line numbers in the process*
          */
-        fun ngramReverse(
-            strings: List<String>,
-            n: Int,
-            eol: CharSequence = defaultEOL,
-            sniff: (String, Int) -> Unit = { _, _ -> }
-        ): HashSet<String> {
+        fun ngramReverse(strings: List<String>, n: Int, inspector: ContentInspector, filename: String, eol: CharSequence = defaultEOL): HashSet<String> {
             val result = hashSetOf<String>()
 
             var line = 0
@@ -48,16 +43,21 @@ class NGram {
             //@todo implement multiline windowed to produce a bit less garbage
             strings.joinToString(eol).windowed(n).forEach { ngram: String ->
                 val intern = ngram.intern()
-                //@todo circuit breaker when sniffer heuristics tell us we have a bad file
-                sniff(intern, line)
-                result.add(intern)
 
-                offset++
-                //at strings.size it points at exactly the line break, and we're pegging that as belonging to the same string
-                //note that [line] is perfectly valid because windowed ends at last full ngram
-                if (offset > strings[line].length) {
-                    offset = 0
-                    line++
+                if (inspector.proceedOnNGram(intern, line, filename)) {
+                    result.add(intern)
+
+                    offset++
+                    //at strings.size it points at exactly the line break, and we're pegging that as belonging to the same string
+                    //note that [line] is perfectly valid because windowed ends at last full ngram
+                    if (offset > strings[line].length) {
+                        offset = 0
+                        line++
+                    }
+                } else {
+                    //skipping the file completely if inspector tells us we're not going to proceed
+                    logger.warn("Inspector complains about file $filename, skipping")
+                    return hashSetOf()
                 }
             }
 
@@ -72,19 +72,14 @@ class NGram {
             return ngram(strings, n, defaultEOL)
         }
 
-        fun reverseNgramsForFile(
-            filename: String,
-            targetIndex: Int,
-            n: Int,
-            sniff: (String, String, Int) -> Unit = { _, _, _ -> }
-        ): HashMap<String, IndexEntry> {
+        fun reverseNgramsForFile(filename: String, targetIndex: Int, n: Int, inspector: ContentInspector = YesMan): HashMap<String, IndexEntry> {
             //map ngram -> bitmap (with a single) file
             val matches: HashMap<String, IndexEntry> = hashMapOf()
 
-            if (wannaProcessThat(filename)) {
+            if (inspector.proceedOnFile(filename)) {
                 val strings = read(filename)
 
-                val ngrams = ngramReverse(strings, n, sniff = { s, line -> sniff(s, filename, line) })
+                val ngrams = ngramReverse(strings, n, inspector, filename)
 
                 for (ngram in ngrams) {
                     matches.computeIfAbsent(ngram) { IndexEntry() }

@@ -1,4 +1,3 @@
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import org.maurezen.indexer.Index

@@ -39,6 +39,8 @@ fun String.indicesOf(substring: String): List<Int> {
     return result
 }
 
+
+@Suppress("unused")
 //grabbed from https://www.reddit.com/r/Kotlin/comments/8gbiul/slf4j_loggers_in_3_ways/
 inline fun <reified T> T.logger(): Logger {
     if (T::class.isCompanion) {
@@ -48,10 +50,13 @@ inline fun <reified T> T.logger(): Logger {
 }
 
 const val alphabetBase = "abcdefghijklmnopqrstuvwxyz"
+const val alphabetCyrillic = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
 const val numbers = "0123456789"
 const val symbols = "~!@#$%^&*()_+-=,./?\\[]{}';\":|<>`"
+const val extraSymbols = "©⋯–…’"
+const val newline = "\n"
 const val whitespace = "\t "
-val alphabet = alphabetBase + alphabetBase.toUpperCase()
+val alphabet = alphabetBase + alphabetBase.toUpperCase() + alphabetCyrillic + alphabetCyrillic.toUpperCase()
 val alphanumeric = alphabet + numbers
 val alphabetExtendedSansNewline = alphanumeric + symbols + whitespace
-val alphabetExtended = alphabetExtendedSansNewline + "\n"
+val alphabetExtended = alphabetExtendedSansNewline + newline + extraSymbols
