@@ -42,6 +42,8 @@ class MultithreadedTest {
     private val maxLineSize = 64
     private val maxQuerySize = 10
 
+    private val reader = FileReaderBasic()
+
     @RepeatedTest(fuzzyTestIterations)
     fun naiveAndParallelYieldSameResults() = runBlocking {
         assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
@@ -238,8 +240,8 @@ class MultithreadedTest {
             return false
         } else {
             firstFilenames.zip(secondFilenames).forEach {
-                val firstLines = read(it.first)
-                val secondLines = read(it.second)
+                val firstLines = reader.readAsList(it.first)
+                val secondLines = reader.readAsList(it.second)
 
                 if (firstLines != secondLines) {
                     return false
@@ -267,8 +269,8 @@ class MultithreadedTest {
         firstFiles.zip(secondFiles).forEach {
             assert( it.first.length() == it.second.length()) { "For seed $seed we expect \n${it.first.absolutePath}\n and \n${it.second.absolutePath}\n have equal size, got ${it.first.length()} and ${it.second.length()} instead. \n Overall, we have file sizes (in bytes) as follows: \n${firstFiles.map(File::length)}\n for the first set and \n${secondFiles.map(File::length)}\n for the second set" }
 
-            val firstLines = read(it.first.absolutePath)
-            val secondLines = read(it.second.absolutePath)
+            val firstLines = reader.readAsList(it.first.absolutePath)
+            val secondLines = reader.readAsList(it.second.absolutePath)
 
             assert(firstLines.size == secondLines.size) { "For seed $seed we expect \n${it.first.absolutePath}\n and \n${it.second.absolutePath}\n have equal amount of lines, got ${firstLines.size} and ${secondLines.size} instead. \n Overall, we have file sizes (in lines) as follows: \n${firstFiles.map(File::lines)}\n for the first set and \n${secondFiles.map(File::lines)}\n for the second set" }
             assert(firstLines == secondLines) {"For seed $seed we expect \n${it.first.absolutePath}\n and \n${it.second.absolutePath}\n have equal contents, got \n${firstLines.joinToString("\n")}\nand\n${secondLines.joinToString("\n")}\ninstead"}

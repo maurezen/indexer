@@ -28,18 +28,20 @@ A basic (text) file indexer library in Kotlin. Given a character sequence, an in
         
  - Nice-to-haves
     - Indexing
-        - [ ] same-file parallelization
-    - Querying
-        - [ ] boolean expressions
-        - [ ] case insensitive queries        
-        - [ ] regular expressions
-        - [ ] almost-matches (confidence score = percentage of ngrams matched)        
+        - [ ] ~~same-file parallelization~~
+    - ~~Querying~~
+        - [ ] ~~boolean expressions~~
+        - [ ] ~~case insensitive queries~~        
+        - [ ] ~~regular expressions~~
+        - [ ] ~~almost-matches (confidence score = percentage of ngrams matched)~~        
     - Files 
         - [x] A list of files and/or directories and a list of exclusion rules allowing to ignore specific files/directories
         - [x] File masks applicable to both include and exclude file sets
         - [ ] Codepage detection
-        - [ ] Binary file detection    
+        - [x] Binary file detection    
         - [ ] File watcher  
+        - [x] Extensible file reader
+        - [x] Extensible content inspection
     - Incremental building
         - [ ] Able to quickly build an index for a fileset that has a few changes in relation to a fileset for a previously-built index 
     - Persistence

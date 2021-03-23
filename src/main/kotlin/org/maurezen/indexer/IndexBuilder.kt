@@ -14,7 +14,11 @@ interface IndexBuilder {
 
     fun with(filename: String): IndexBuilder
     fun with(filenames: Iterable<String>): IndexBuilder
+
     fun inspectedBy(inspector: ContentInspector): IndexBuilder
+
+    fun readBy(reader: FileReader): IndexBuilder
+
     fun filter(filter: FileFilter): IndexBuilder
 
     fun buildAsync(): Deferred<Index>

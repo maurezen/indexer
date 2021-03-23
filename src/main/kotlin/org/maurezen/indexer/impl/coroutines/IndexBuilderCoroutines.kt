@@ -14,8 +14,6 @@ class IndexBuilderCoroutines (
     override val n: Int
 ) : IndexBuilderParallel(n) {
 
-    private val logger = logger()
-
     @Volatile
     private lateinit var currentUpdate: Deferred<Index>
 
@@ -33,10 +31,10 @@ class IndexBuilderCoroutines (
         currentUpdate = GlobalScope.async {
 
             val filenames = explodeFileRoots(roots, filter)
-            val fileMaps = reverseNGramsForFilesCoroutine(this, filenames, n, inspector)
+            val fileMaps = reverseNGramsForFilesCoroutine(this, filenames)
             matches = coalesceReverseNgramsCoroutines(fileMaps)
 
-            val newIndex = IndexNaive(n, matches, filenames)
+            val newIndex = IndexNaive(n, matches, filenames, reader)
             advanceStateFromBuild()
             currentIndex = newIndex
             currentIndex
@@ -50,9 +48,9 @@ class IndexBuilderCoroutines (
             .reduce { acc, entry -> acc.mergeMapBitMap(entry) }
             .orElse(hashMapOf())
 
-    private suspend fun reverseNGramsForFilesCoroutine(scope: CoroutineScope, filenames: List<String>, n: Int, inspector: ContentInspector): List<HashMap<String, IndexEntry>> = run {
+    private suspend fun reverseNGramsForFilesCoroutine(scope: CoroutineScope, filenames: List<String>): List<HashMap<String, IndexEntry>> = run {
         val jobs = filenames.mapIndexed { index, it ->
-            scope.async { reverseNgramsForFile(it, index, n, inspector) }
+            scope.async { reverseNgramsForFile(it, index, n, inspector, reader) }
         }
         jobs.awaitAll()
     }

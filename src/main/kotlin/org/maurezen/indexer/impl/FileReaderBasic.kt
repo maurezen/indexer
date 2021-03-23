@@ -1,5 +1,6 @@
 package org.maurezen.indexer.impl
 
+import org.maurezen.indexer.FileReader
 import java.io.File
 import java.io.FileFilter
 
@@ -8,13 +9,20 @@ val defaultEOL: CharSequence = "\n"
 
 val ACCEPTS_EVERYTHING = FileFilter { true }
 
-/**
- * Pulls the whole file into memory. Assumes the file exists.
- * For the moment assumes UTF-8.
- */
-fun read(filename: String): List<String> = File(filename).useLines { it.toList() }
+class FileReaderBasic: FileReader {
 
-fun read(filenames: List<String>): Map<String, List<String>> = filenames.associateWith(::read)
+    /**
+     * Returns a sequence of lines of this file without pulling the whole thing into memory. Assumes the file exists.
+     * For the moment assumes UTF-8
+     */
+    override fun read(filename: String): Sequence<String> = File(filename).useLines { it }
+
+    /**
+     * Pulls the whole file into memory. Assumes the file exists.
+     * For the moment assumes UTF-8.
+     */
+    override fun readAsList(filename: String): List<String> = File(filename).useLines { it.toList() }
+}
 
 fun explodeFileRoots(roots: List<String>, filter: FileFilter = ACCEPTS_EVERYTHING): ArrayList<String> {
     val files = arrayListOf<String>()
