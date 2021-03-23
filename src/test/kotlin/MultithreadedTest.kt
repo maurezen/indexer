@@ -442,16 +442,12 @@ class MultithreadedTest {
         return (1..length).map { source[random.nextInt(source.size)] }.joinToString(separator = "")
     }
 
-    private val logger = logger()
-
     private suspend fun <T> coroutinize(what: Iterable<T>, action: suspend (T) -> Unit) {
-        val time = measureTimeMillis {
-            coroutineScope {
-                // we're perfectly fine with a coroutine per item @ up to 1m elements and possibly more
-                what.forEachIndexed { _: Int, it: T ->
-                    launch {
-                        action(it)
-                    }
+        coroutineScope {
+            // we're perfectly fine with a coroutine per item @ up to 1m elements and possibly more
+            what.forEachIndexed { _: Int, it: T ->
+                launch {
+                    action(it)
                 }
             }
         }
