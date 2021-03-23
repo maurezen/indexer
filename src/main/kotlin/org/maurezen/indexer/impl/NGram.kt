@@ -97,18 +97,5 @@ class NGram {
             return matches
         }
 
-
-        val types = HashSet<String>()
-        fun wannaProcessThat(filename: String): Boolean {
-            val contentType = Files.probeContentType(Path.of(filename))
-
-            //  .java is text/plain
-            //  .kt is null
-            //  .zip is application/whatever
-            if (types.add(contentType)) {
-                logger.warnIfEnabled { "First time detected $contentType type: $filename" }
-            }
-            return true
-        }
     }
 }
