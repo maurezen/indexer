@@ -13,13 +13,3 @@ interface ContentInspector {
     fun proceedOnNGram(ngram: String, line: Int, filename: String): Boolean
 
 }
-
-val YesMan = object: ContentInspector {
-    override fun proceedOnFile(filename: String): Boolean {
-        return true
-    }
-
-    override fun proceedOnNGram(ngram: String, line: Int, filename: String): Boolean {
-        return true
-    }
-}

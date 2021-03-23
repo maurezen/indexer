@@ -1,7 +1,7 @@
 package org.maurezen.indexer.impl
 
 import org.maurezen.indexer.ContentInspector
-import org.maurezen.indexer.YesMan
+import org.maurezen.indexer.impl.inspection.YesMan
 
 class NGram {
     companion object {
