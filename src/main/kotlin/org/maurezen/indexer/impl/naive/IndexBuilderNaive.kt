@@ -3,10 +3,7 @@ package org.maurezen.indexer.impl.naive
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
-import org.maurezen.indexer.Index
-import org.maurezen.indexer.IndexBuilder
-import org.maurezen.indexer.IndexUpdater
-import org.maurezen.indexer.State
+import org.maurezen.indexer.*
 import org.maurezen.indexer.impl.ACCEPTS_EVERYTHING
 import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
 import org.maurezen.indexer.impl.explodeFileRoots
@@ -24,6 +21,7 @@ open class IndexBuilderNaive (
 
     val roots = ArrayList<String>()
     var filter = ACCEPTS_EVERYTHING
+    var inspector: ContentInspector = YesMan
 
     override fun with(filename: String): IndexBuilder {
         roots.add(filename.intern())
@@ -32,6 +30,11 @@ open class IndexBuilderNaive (
 
     override fun with(filenames: Iterable<String>): IndexBuilder {
         filenames.forEach(this::with)
+        return this
+    }
+
+    override fun inspectedBy(inspector: ContentInspector): IndexBuilder {
+        this.inspector = inspector
         return this
     }
 

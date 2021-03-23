@@ -1,6 +1,7 @@
 package org.maurezen.indexer.impl.coroutines
 
 import kotlinx.coroutines.*
+import org.maurezen.indexer.ContentInspector
 import org.maurezen.indexer.Index
 import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
@@ -32,7 +33,7 @@ class IndexBuilderCoroutines (
         currentUpdate = GlobalScope.async {
 
             val filenames = explodeFileRoots(roots, filter)
-            val fileMaps = reverseNGramsForFilesCoroutine(this, filenames, n)
+            val fileMaps = reverseNGramsForFilesCoroutine(this, filenames, n, inspector)
             matches = coalesceReverseNgramsCoroutines(fileMaps)
 
             val newIndex = IndexNaive(n, matches, filenames)
@@ -49,9 +50,9 @@ class IndexBuilderCoroutines (
             .reduce { acc, entry -> acc.mergeMapBitMap(entry) }
             .orElse(hashMapOf())
 
-    private suspend fun reverseNGramsForFilesCoroutine(scope: CoroutineScope, filenames: List<String>, n: Int): List<HashMap<String, IndexEntry>> = run {
+    private suspend fun reverseNGramsForFilesCoroutine(scope: CoroutineScope, filenames: List<String>, n: Int, inspector: ContentInspector): List<HashMap<String, IndexEntry>> = run {
         val jobs = filenames.mapIndexed { index, it ->
-            scope.async { reverseNgramsForFile(it, index, n, sniff = { s, f, l -> sniffer(s, f, l) }) }
+            scope.async { reverseNgramsForFile(it, index, n, inspector) }
         }
         jobs.awaitAll()
     }
@@ -63,16 +64,5 @@ class IndexBuilderCoroutines (
     @Synchronized
     override suspend fun buildFuture(): Future<Index> {
         return FutureTask { runBlocking { buildAsync().await() } }
-    }
-
-    //@todo turn this into a proper sniffer visitor
-    private val suspiciousChars = mutableSetOf<Char>()
-    private fun sniffer(ngram: String, filename: String, line: Int) {
-        ngram.toCharArray()
-            .filter { !alphabetExtended.contains(it) }
-            .filter {suspiciousChars.add(it)}
-            .forEach {
-                logger.warn("First occurrence of suspicious char \"$it\" - happened in $filename at line $line")
-            }
     }
 }
