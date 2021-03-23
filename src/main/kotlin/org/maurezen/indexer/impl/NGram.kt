@@ -5,6 +5,8 @@ import java.nio.file.Path
 
 class NGram {
     companion object {
+        private val logger = logger()
+
         /**
          * Splits a given string into an n-gram list.
          *
@@ -70,8 +72,6 @@ class NGram {
             return ngram(strings, n, defaultEOL)
         }
 
-        private val logger = logger()
-
         fun reverseNgramsForFile(
             filename: String,
             targetIndex: Int,
@@ -91,9 +91,7 @@ class NGram {
                     matches[ngram]!!.set(targetIndex)
                 }
             } else {
-                if (logger.isWarnEnabled) {
-                    logger.warnIfEnabled { "Undesirable file $filename detected, skipping" }
-                }
+                logger.warn("Undesirable file $filename detected, skipping")
             }
             //map ngram -> bitmap (with a single) file
             return matches

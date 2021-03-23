@@ -29,18 +29,6 @@ infix fun <E: HashMap<K, IndexEntry>, K> E.mergeMapBitMap(what: E): E {
     return this
 }
 
-internal fun Logger.warnIfEnabled(messageSupplier: () -> String) {
-    if (isWarnEnabled) {
-        warn(messageSupplier())
-    }
-}
-
-internal fun Logger.debugIfEnabled(messageSupplier: () -> String) {
-    if (isDebugEnabled) {
-        debug(messageSupplier())
-    }
-}
-
 fun String.indicesOf(substring: String): List<Int> {
     val result = mutableListOf<Int>()
     var start = 0
