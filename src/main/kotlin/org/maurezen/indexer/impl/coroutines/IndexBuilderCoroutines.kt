@@ -30,7 +30,7 @@ class IndexBuilderCoroutines (
 
         currentUpdate = GlobalScope.async {
 
-            val filenames = explodeFileRoots(roots, filter)
+            val filenames = reader.explodeFileRoots(roots, filter)
             val fileMaps = reverseNGramsForFilesCoroutine(this, filenames)
             matches = coalesceReverseNgramsCoroutines(fileMaps)
 

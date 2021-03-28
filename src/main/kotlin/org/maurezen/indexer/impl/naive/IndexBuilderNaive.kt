@@ -7,7 +7,6 @@ import org.maurezen.indexer.*
 import org.maurezen.indexer.impl.ACCEPTS_EVERYTHING
 import org.maurezen.indexer.impl.FileReaderBasic
 import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
-import org.maurezen.indexer.impl.explodeFileRoots
 import org.maurezen.indexer.impl.inspection.YesMan
 import org.maurezen.indexer.impl.mergeMapBitMap
 import java.io.FileFilter
@@ -60,7 +59,7 @@ open class IndexBuilderNaive (
 
     override suspend fun buildFuture(): Future<Index> {
         currentIndex = if (roots.isNotEmpty()) {
-            val filenames = explodeFileRoots(roots)
+            val filenames = reader.explodeFileRoots(roots)
             val fileMaps = filenames.mapIndexedTo(ArrayList()) { index, filename -> Pair(reverseNgramsForFile(filename,
                 index,
                 n,

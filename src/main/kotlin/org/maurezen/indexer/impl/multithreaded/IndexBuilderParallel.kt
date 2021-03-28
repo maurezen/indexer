@@ -6,7 +6,6 @@ import kotlinx.coroutines.async
 import org.maurezen.indexer.Index
 import org.maurezen.indexer.State
 import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
-import org.maurezen.indexer.impl.explodeFileRoots
 import org.maurezen.indexer.impl.mergeMapBitMap
 import org.maurezen.indexer.impl.naive.IndexBuilderNaive
 import org.maurezen.indexer.impl.naive.IndexNaive
@@ -85,7 +84,7 @@ open class IndexBuilderParallel (
 
         currentUpdate = CompletableFuture.supplyAsync {
             if (roots.isNotEmpty()) {
-                val filenames = explodeFileRoots(roots)
+                val filenames = reader.explodeFileRoots(roots)
 
                 val fileMaps = filenames.mapIndexed {index, it -> Pair(index, it)}.parallelStream()
                     .map { pair -> reverseNgramsForFile(pair.second, pair.first, n, reader = reader) }

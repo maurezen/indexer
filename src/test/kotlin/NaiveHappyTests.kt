@@ -17,9 +17,7 @@ class NaiveHappyTests {
 
     @Test
     fun readsAndPrintsTestFile() {
-        val list = readTestFile()
-
-        printStrings(list)
+        readTestFile { printStrings(it) }
     }
 
     @Test
@@ -31,26 +29,23 @@ class NaiveHappyTests {
 
     @Test
     fun readsTestFileAndSplitsFirstStringToNgrams() {
-        val list = readTestFile()
-
-        println(list[0])
-        println(ngram(list[0], n).joinToString())
+        readTestFile {
+            val line = it.iterator().next()
+            println(line)
+            println(ngram(line, n).joinToString())
+        }
     }
 
     @Test
     fun readsTestFileAndSplitsItToNgrams() {
-        val list = readTestFile()
-
-        printStrings(list)
-        println(ngram(list, n).joinToString(","))
+        readTestFile { printStrings(it) }
+        readTestFile { println(ngram(it, n).joinToString(",")) }
     }
 
     @Test
     fun readsTestFileAndSplitsItToNgramsWithReverseIndex() {
-        val list = readTestFile()
-
-        printStrings(list)
-        println(ngramReverse(list, n, YesMan, ""))
+        readTestFile { printStrings(it) }
+        readTestFile { println(ngramReverse(it, n, YesMan, "")) }
     }
 
     private fun readAndIndexTestFile(): Index = runBlocking {
@@ -58,15 +53,15 @@ class NaiveHappyTests {
     }
 
     private fun readAndIndexTestFiles(): Index = runBlocking {
-        IndexBuilderNaive(n).with(readTestFiles().keys).buildFuture().get()
+        IndexBuilderNaive(n).with(readTestFiles{it.toList()}.keys).buildFuture().get()
     }
 
     private fun readAndIndexTestFilesMultithreaded(): Future<Index> = runBlocking {
-        IndexBuilderParallel(n).with(readTestFiles().keys).buildFuture()
+        IndexBuilderParallel(n).with(readTestFiles{it.toList()}.keys).buildFuture()
     }
 
     private fun readAndIndexTestFilesCoroutines(): Index = runBlocking {
-        IndexBuilderCoroutines(n).with(readTestFiles().keys).buildAsync().await()
+        IndexBuilderCoroutines(n).with(readTestFiles{it.toList()}.keys).buildAsync().await()
     }
 
     @Test
