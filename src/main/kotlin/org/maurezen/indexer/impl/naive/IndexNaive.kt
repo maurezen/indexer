@@ -73,7 +73,7 @@ class IndexNaive (
     @Synchronized
     //TODO make file scans multithreaded-environment-friendly
     //TODO cache file scans
-    private fun getFileContents(filename: String) = reader.readAsList(filename)
+    private fun <T> getFileContentsAnd(filename: String, block: (Sequence<String>) -> T) = reader.readAnd(filename, block)
 
     private fun buildStats(): Stats {
         val ngrams = matches.keys.size
