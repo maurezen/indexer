@@ -3,6 +3,9 @@ package org.maurezen.indexer
 import org.maurezen.indexer.impl.ACCEPTS_EVERYTHING
 import java.io.FileFilter
 
+/**
+ * An extension point to obtain file contents in a non-standard way
+ */
 interface FileReader {
 
     /**
@@ -11,7 +14,7 @@ interface FileReader {
     fun <T> readAnd(filename: String, block: (Sequence<String>) -> T): T
 
     /**
-     * Pulls the whole file into memory.
+     * Returns a list of lines of this file. Pulls the whole file into memory.
      */
     fun readAsList(filename: String): List<String> = readAnd(filename) { it.toList() }
 

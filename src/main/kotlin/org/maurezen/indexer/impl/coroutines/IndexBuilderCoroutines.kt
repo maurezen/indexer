@@ -6,12 +6,13 @@ import org.maurezen.indexer.Index
 import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
 import org.maurezen.indexer.impl.multithreaded.IndexBuilderParallel
+import org.maurezen.indexer.impl.naive.DEFAULT_NGRAM_ARITY
 import org.maurezen.indexer.impl.naive.IndexNaive
 import java.util.concurrent.Future
 import java.util.concurrent.FutureTask
 
 class IndexBuilderCoroutines (
-    override val n: Int
+    override val n: Int = DEFAULT_NGRAM_ARITY
 ) : IndexBuilderParallel(n) {
 
     @Volatile
