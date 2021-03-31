@@ -8,6 +8,7 @@ import org.maurezen.indexer.State
 import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
 import org.maurezen.indexer.impl.explodeFileRoots
 import org.maurezen.indexer.impl.mergeMapBitMap
+import org.maurezen.indexer.impl.naive.DEFAULT_NGRAM_ARITY
 import org.maurezen.indexer.impl.naive.IndexBuilderNaive
 import org.maurezen.indexer.impl.naive.IndexNaive
 import java.util.concurrent.CompletableFuture
@@ -15,7 +16,7 @@ import java.util.concurrent.Future
 import java.util.stream.Collectors
 
 open class IndexBuilderParallel (
-    override val n: Int
+    override val n: Int = DEFAULT_NGRAM_ARITY
 ) : IndexBuilderNaive(n) {
 
     @Volatile
