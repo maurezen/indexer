@@ -2,6 +2,9 @@ package org.maurezen.indexer.impl.inspection
 
 import org.maurezen.indexer.ContentInspector
 
+/**
+ * A default implementation of ContentInspector.
+ */
 object YesMan: ContentInspector {
 
     override fun proceedOnFile(filename: String): Boolean {

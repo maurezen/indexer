@@ -20,7 +20,6 @@ class WhitelistCharacterInspector(
     private val types = HashSet<String>()
     private val whitelistSet = charWhitelist.toHashSet()
     private val suspiciousChars = ConcurrentHashMap<String, HashSet<Char>>()
-    // we need to have this on a per-filename basis
 
     override fun proceedOnFile(filename: String): Boolean {
         val contentType = Files.probeContentType(Path.of(filename))

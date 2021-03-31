@@ -14,8 +14,10 @@ import java.io.FileFilter
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Future
 
+const val DEFAULT_NGRAM_ARITY = 3
+
 open class IndexBuilderNaive (
-    override val n: Int
+    override val n: Int = DEFAULT_NGRAM_ARITY
 ) : IndexUpdater {
 
     @Volatile
@@ -51,7 +53,6 @@ open class IndexBuilderNaive (
         return this
     }
 
-    //@todo this kinda screws the whole concept over innit
     override fun buildAsync(): Deferred<Index> {
         return GlobalScope.async {
             buildFuture().get()
@@ -96,8 +97,10 @@ open class IndexBuilderNaive (
         //nothing to be done here, update is a synchronous call for a single-threaded implementation
     }
 
-    override fun updateInProgress(): Boolean = false
-
+    /**
+     * Returns true if and only if an update is in progress at the moment.
+     */
+    protected open fun updateInProgress(): Boolean = false
 
 }
 
