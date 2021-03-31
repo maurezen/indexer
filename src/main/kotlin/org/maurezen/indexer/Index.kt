@@ -1,7 +1,7 @@
 package org.maurezen.indexer
 
-import org.maurezen.indexer.impl.RichUserIndexEntry
-import org.maurezen.indexer.impl.UserIndexEntry
+import org.maurezen.indexer.impl.RichIndexEntry
+import org.maurezen.indexer.impl.IndexEntry
 
 /**
  * An snapshot of index builder state that the user can query.
@@ -13,17 +13,17 @@ interface Index {
      *
      * Doesn't rely on filesystem.
      */
-    fun query(pattern: String): UserIndexEntry
+    fun query(pattern: String): IndexEntry
 
     /**
      * Returns lines and line positions of the pattern occurrences for each file.
      *
      * May have to scan the affected files.
      */
-    fun queryAndScan(pattern: String): RichUserIndexEntry
+    fun queryAndScan(pattern: String): RichIndexEntry
 
     /**
-     * Stats like amount of ngrams, etc are pret
+     * Stats like amount of ngrams, etc
      */
     fun stats(): Stats
 }
