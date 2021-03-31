@@ -117,9 +117,9 @@ class MultithreadedTest {
         val (filenames, seed) = generateRandomDatafiles(prefix)
         val naive = IndexBuilderNaive(n).with(filenames).buildFuture().get()
 
-        val queryResults: HashMap<String, Pair<UserIndexEntry, Stats>> =
+        val queryResults: HashMap<String, Pair<IndexEntry, Stats>> =
             hashMapOf()
-        val resultsQueue = ConcurrentLinkedQueue<Pair<String, Pair<UserIndexEntry, Stats>>>()
+        val resultsQueue = ConcurrentLinkedQueue<Pair<String, Pair<IndexEntry, Stats>>>()
 
         //using runBlocking for barrier synchronization
         runBlocking(Dispatchers.Default) {
@@ -350,11 +350,11 @@ class MultithreadedTest {
         return Pair(generateRandomDatafilesInADir(prefix, seed), seed)
     }
 
-    private fun reportDifference(first: UserIndexEntry, firstName: String, second: UserIndexEntry, secondName: String, query: String, seed: Int) {
+    private fun reportDifference(first: IndexEntry, firstName: String, second: IndexEntry, secondName: String, query: String, seed: Int) {
         println("Result mismatch for seed $seed and query \"$query\": \n$firstName returned $first \n$secondName returned $second")
     }
 
-    private fun reportDifference(first: RichUserIndexEntry, firstName: String, second: RichUserIndexEntry, secondName: String, query: String, seed: Int) {
+    private fun reportDifference(first: RichIndexEntry, firstName: String, second: RichIndexEntry, secondName: String, query: String, seed: Int) {
         println("Result mismatch for seed $seed and query \"$query\": \n$firstName returned $first \n$secondName returned $second")
     }
 

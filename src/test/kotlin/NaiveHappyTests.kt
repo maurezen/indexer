@@ -100,11 +100,11 @@ class NaiveHappyTests {
         )
     }
 
-    private fun compareResultToExpectation(entry: RichUserIndexEntry, expected: String, pattern: String) {
+    private fun compareResultToExpectation(entry: RichIndexEntry, expected: String, pattern: String) {
         assert(entry.postSorted() == expected) { "We expect '$pattern' query return \n$expected\n, got \n${entry.postSorted()}\n instead" }
     }
 
-    private fun compareResultToExpectation(entry: UserIndexEntry, expected: String, pattern: String) {
+    private fun compareResultToExpectation(entry: IndexEntry, expected: String, pattern: String) {
         assert(entry.postSorted() == expected) { "We expect '$pattern' query return \n$expected\n, got \n${entry.postSorted()}\n instead" }
     }
 
@@ -221,7 +221,7 @@ class NaiveHappyTests {
         )
     }
 
-    private fun UserIndexEntry.postSorted(): String {
+    private fun IndexEntry.postSorted(): String {
         val i = this.sorted().iterator()
         if (!i.hasNext()) return "{}"
         val sb = StringBuilder()
@@ -234,7 +234,7 @@ class NaiveHappyTests {
         }
     }
 
-    private fun RichUserIndexEntry.postSorted(): String {
+    private fun RichIndexEntry.postSorted(): String {
         val i = this.entries.sortedBy { entry -> entry.key }.iterator()
         if (!i.hasNext()) return "{}"
         val sb = StringBuilder()

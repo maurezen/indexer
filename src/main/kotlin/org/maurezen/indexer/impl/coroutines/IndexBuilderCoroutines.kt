@@ -1,7 +1,6 @@
 package org.maurezen.indexer.impl.coroutines
 
 import kotlinx.coroutines.*
-import org.maurezen.indexer.ContentInspector
 import org.maurezen.indexer.Index
 import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
@@ -27,7 +26,7 @@ class IndexBuilderCoroutines (
 
         advanceStateToBuild()
 
-        var matches: HashMap<String, IndexEntry>
+        var matches: HashMap<String, IndexEntryInternal>
 
         currentUpdate = GlobalScope.async {
 
@@ -44,12 +43,12 @@ class IndexBuilderCoroutines (
         return currentUpdate
     }
 
-    private fun coalesceReverseNgrams(fileMaps: List<HashMap<String, IndexEntry>>) =
+    private fun coalesceReverseNgrams(fileMaps: List<HashMap<String, IndexEntryInternal>>) =
         fileMaps.parallelStream()
             .reduce { acc, entry -> acc.mergeMapBitMap(entry) }
             .orElse(hashMapOf())
 
-    private suspend fun reverseNGramsForFilesCoroutine(scope: CoroutineScope, filenames: List<String>): List<HashMap<String, IndexEntry>> = run {
+    private suspend fun reverseNGramsForFilesCoroutine(scope: CoroutineScope, filenames: List<String>): List<HashMap<String, IndexEntryInternal>> = run {
         val jobs = filenames.mapIndexed { index, it ->
             scope.async { reverseNgramsForFile(it, index, n, inspector, reader) }
         }

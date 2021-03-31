@@ -15,32 +15,32 @@ import java.io.File
 class IndexNaive (
     private val n: Int,
     //map ngram -> bitmap file
-    private val matches: HashMap<String, IndexEntry>,
+    private val matches: HashMap<String, IndexEntryInternal>,
     private val filenames: ArrayList<String>,
     private val reader: FileReader
 ) : Index {
 
     private val stats: Stats by lazy { buildStats()}
 
-    override fun query(pattern: String): UserIndexEntry {
+    override fun query(pattern: String): IndexEntry {
         val ngrams = ngram(pattern, n)
 
-        val matchesPerNGram = ngrams.mapTo(ArrayList(ngrams.size)) { ngram -> matches.getOrDefault(ngram, IndexEntry())}
+        val matchesPerNGram = ngrams.mapTo(ArrayList(ngrams.size)) { ngram -> matches.getOrDefault(ngram, IndexEntryInternal())}
 
         return materialize(intersection(matchesPerNGram))
     }
 
-    override fun queryAndScan(pattern: String): RichUserIndexEntry {
+    override fun queryAndScan(pattern: String): RichIndexEntry {
         return enrich(query(pattern), pattern)
     }
 
     override fun stats(): Stats = stats
 
-    private fun intersection(indexEntries: ArrayList<IndexEntry>): IndexEntry {
+    private fun intersection(indexEntries: ArrayList<IndexEntryInternal>): IndexEntryInternal {
         return if (indexEntries.isEmpty()) {
-            IndexEntry()
+            IndexEntryInternal()
         } else {
-            val intersection: IndexEntry = indexEntries.removeAt(0)
+            val intersection: IndexEntryInternal = indexEntries.removeAt(0)
 
             indexEntries.fold(intersection) { acc, entry -> acc.intersectImmutable(entry) }
         }
@@ -50,16 +50,16 @@ class IndexNaive (
         return filenames[index]
     }
 
-    private fun materialize(intersection: IndexEntry): UserIndexEntry {
-        val result = UserIndexEntry()
+    private fun materialize(intersection: IndexEntryInternal): IndexEntry {
+        val result = IndexEntry()
 
         intersection.forEach { result.add(filename(it)) }
 
         return result
     }
 
-    private fun enrich(intersection: UserIndexEntry, query: String): RichUserIndexEntry {
-        val result = RichUserIndexEntry()
+    private fun enrich(intersection: IndexEntry, query: String): RichIndexEntry {
+        val result = RichIndexEntry()
 
         intersection.forEach { result[it] = scan(it, query) }
 
@@ -90,7 +90,7 @@ class IndexNaive (
             .flatten()
             .size
         val entriesPerNGramMax = matches.values
-            .map(IndexEntry::cardinality)
+            .map(IndexEntryInternal::cardinality)
             .maxOrNull() ?: 0
         val entriesPerNGramAvg = entriesTotal*1.0 / ngrams
 
@@ -110,7 +110,7 @@ class IndexNaive (
     }
 }
 
-fun UserIndexEntry.buildStats(): Stats {
+fun IndexEntry.buildStats(): Stats {
     val ngrams = 1
 
     val filesQty = size
@@ -133,7 +133,7 @@ fun UserIndexEntry.buildStats(): Stats {
     )
 }
 
-fun RichUserIndexEntry.buildStats(): Stats {
+fun RichIndexEntry.buildStats(): Stats {
     val ngrams = 1
 
     val filesQty = size

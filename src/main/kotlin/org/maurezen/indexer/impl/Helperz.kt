@@ -6,24 +6,24 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 //a set of filenames
-typealias UserIndexEntry = HashSet<String>
+typealias IndexEntry = HashSet<String>
 
 //map file->map line->list offsets
-typealias RichUserIndexEntry = HashMap<String, Map<Int, List<Int>>>
+typealias RichIndexEntry = HashMap<String, Map<Int, List<Int>>>
 
 //@todo experiment on live data for 32-bit vs 64-bit decision
 //  preliminary analysis suggests we prefer 32-bit due to smaller footprint
-typealias IndexEntry = EWAHCompressedBitmap32
+internal typealias IndexEntryInternal = EWAHCompressedBitmap32
 
-fun IndexEntry.intersectImmutable(another: IndexEntry): IndexEntry {
+fun IndexEntryInternal.intersectImmutable(another: IndexEntryInternal): IndexEntryInternal {
     return and(another)
 }
 
-fun IndexEntry.addImmutable(what: IndexEntry): IndexEntry {
+fun IndexEntryInternal.addImmutable(what: IndexEntryInternal): IndexEntryInternal {
     return or(what)
 }
 
-infix fun <E: HashMap<K, IndexEntry>, K> E.mergeMapBitMap(what: E): E {
+infix fun <E: HashMap<K, IndexEntryInternal>, K> E.mergeMapBitMap(what: E): E {
     for ((key, value) in what) {
         this.merge(key, value, { oldValue, newValue -> oldValue.addImmutable(newValue) })
     }
