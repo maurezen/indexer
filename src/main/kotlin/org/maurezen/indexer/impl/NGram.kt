@@ -79,9 +79,9 @@ class NGram {
             n: Int,
             inspector: ContentInspector = YesMan,
             reader: FileReader
-        ): HashMap<String, IndexEntry> {
+        ): HashMap<String, IndexEntryInternal> {
             //map ngram -> bitmap (with a single) file
-            val matches: HashMap<String, IndexEntry> = hashMapOf()
+            val matches: HashMap<String, IndexEntryInternal> = hashMapOf()
 
             if (inspector.proceedOnFile(filename)) {
                 val strings = reader.readAsList(filename)
@@ -89,7 +89,7 @@ class NGram {
                 val ngrams = ngramReverse(strings, n, inspector, filename)
 
                 for (ngram in ngrams) {
-                    matches.computeIfAbsent(ngram) { IndexEntry() }
+                    matches.computeIfAbsent(ngram) { IndexEntryInternal() }
                     matches[ngram]!!.set(targetIndex)
                 }
             } else {
