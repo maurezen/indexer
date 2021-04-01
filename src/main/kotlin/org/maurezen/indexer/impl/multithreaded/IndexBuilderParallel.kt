@@ -33,10 +33,6 @@ open class IndexBuilderParallel (
         buildAsync()
     }
 
-    override fun status(): State {
-        return state
-    }
-
     @Synchronized
     override fun cancelUpdate() {
         if (updateInProgress()) {

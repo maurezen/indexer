@@ -15,8 +15,6 @@ interface IndexUpdater: IndexBuilder {
      */
     suspend fun update()
 
-    fun status(): State
-
     /**
      * Cancels an ongoing update. Whatever state the index was in pre-update remains available.
      */

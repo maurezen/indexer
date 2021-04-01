@@ -29,6 +29,23 @@ interface Index {
 }
 
 /**
+ * A null object for the Index, this is something that one gets when trying to get an index before the indexing process is finished
+ */
+object EmptyIndex: Index {
+    override fun query(pattern: String): IndexEntry {
+        return hashSetOf()
+    }
+
+    override fun queryAndScan(pattern: String): RichIndexEntry {
+        return hashMapOf()
+    }
+
+    override fun stats(): Stats {
+        return Stats(0, 0, 0, 0, 0.0, 0, 0, 0, 0.0, 0.0, "")
+    }
+}
+
+/**
  * Some possibly useful metrics of the index internal state.
  */
 data class Stats(
