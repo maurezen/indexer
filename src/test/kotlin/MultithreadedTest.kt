@@ -1,10 +1,10 @@
 import kotlinx.coroutines.*
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.maurezen.indexer.Index
-import org.maurezen.indexer.State
 import org.maurezen.indexer.Stats
 import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.coroutines.IndexBuilderCoroutines
@@ -13,6 +13,7 @@ import org.maurezen.indexer.impl.naive.IndexBuilderNaive
 import org.maurezen.indexer.impl.naive.buildStats
 import java.io.File
 import java.lang.String.format
+import java.lang.UnsupportedOperationException
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ThreadLocalRandom
@@ -26,9 +27,6 @@ import kotlin.system.measureTimeMillis
 
 private const val fuzzyTestIterations = 20
 private const val fuzzyQueries = 100000
-
-private const val asyncTimeoutMs = 100
-private const val cancellationTimeoutMS = 1000
 
 private const val prefix = "MultithreadedTestFile"
 
@@ -145,45 +143,8 @@ class MultithreadedTest {
         }
     }
 
-    @Test
-    fun coroutineAsyncIsAsync() {
-        assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
-
-        val (filenames, _) = generateRandomDatafiles(prefix)
-
-        val indexBuilderCoroutines = IndexBuilderCoroutines(n)
-        assert ( indexBuilderCoroutines.status() == State.INITIAL) { "we expect index builder to be in initial state"}
-
-        val startIndexing = System.currentTimeMillis()
-        val naiveCoroutines = indexBuilderCoroutines.with(filenames).buildAsync()
-        val timeIndexing = System.currentTimeMillis() - startIndexing
-
-        assert(timeIndexing < asyncTimeoutMs) { "We expect async methods to be, well, async and return within $asyncTimeoutMs ms, not in $timeIndexing ms" }
-        assert(naiveCoroutines.isActive) { "We expect async index computation not finish yet" }
-        val status = indexBuilderCoroutines.status()
-        assert(status == State.BUILD) { "We expect indexer to be in build state, not in $status" }
-
-        indexBuilderCoroutines.cancelUpdate()
-    }
-
-    @Test
-    fun coroutineIsCancelable() = runBlocking {
-        assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
-
-        val (filenames, _) = generateRandomDatafiles(prefix)
-
-        val indexBuilderCoroutines = IndexBuilderCoroutines(n)
-
-        assert(indexBuilderCoroutines.status() == State.INITIAL) { "we expect index builder to be in initial state" }
-
-        indexBuilderCoroutines.with(filenames).buildAsync()
-
-        val time = measureTimeMillis {
-            indexBuilderCoroutines.cancelUpdate()
-        }
-
-        assert(time < cancellationTimeoutMS) { "Time to cancel index building should be under $cancellationTimeoutMS ms, was $time instead" }
-        assert(indexBuilderCoroutines.status() == State.INITIAL) { "we expect index builder to be in initial state after cancellation" }
+    private suspend fun assertIndexNotReadyYet(indexBuilderCoroutines: IndexBuilderCoroutines) {
+        assertThrows<UninitializedPropertyAccessException>("we expect index builder to be in initial state") { indexBuilderCoroutines.get() }
     }
 
     @RepeatedTest(fuzzyTestIterations)
