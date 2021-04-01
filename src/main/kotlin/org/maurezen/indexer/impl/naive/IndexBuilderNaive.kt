@@ -21,7 +21,7 @@ open class IndexBuilderNaive (
 ) : IndexUpdater {
 
     @Volatile
-    lateinit var currentIndex: Index
+    var currentIndex: Index = EmptyIndex
 
     val roots = ArrayList<String>()
     var filter = ACCEPTS_EVERYTHING
@@ -82,11 +82,7 @@ open class IndexBuilderNaive (
         buildAsync().await()
     }
 
-    override fun status(): State {
-        return if (currentIndexInitialized()) State.READY else State.INITIAL
-    }
-
-    protected fun currentIndexInitialized() = this::currentIndex.isInitialized
+    protected fun currentIndexInitialized() = currentIndex != EmptyIndex
 
 
     override suspend fun get(): Index {
