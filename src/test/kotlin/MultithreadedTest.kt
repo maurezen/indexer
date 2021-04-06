@@ -4,8 +4,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.maurezen.indexer.Index
-import org.maurezen.indexer.Stats
+import org.maurezen.indexer.*
 import org.maurezen.indexer.impl.*
 import org.maurezen.indexer.impl.coroutines.IndexBuilderCoroutines
 import org.maurezen.indexer.impl.multithreaded.IndexBuilderParallel
@@ -13,7 +12,6 @@ import org.maurezen.indexer.impl.naive.IndexBuilderNaive
 import org.maurezen.indexer.impl.naive.buildStats
 import java.io.File
 import java.lang.String.format
-import java.lang.UnsupportedOperationException
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ThreadLocalRandom
@@ -23,7 +21,6 @@ import java.util.stream.IntStream
 import kotlin.math.ceil
 import kotlin.math.log10
 import kotlin.random.Random
-import kotlin.system.measureTimeMillis
 
 private const val fuzzyTestIterations = 20
 private const val fuzzyQueries = 100000
@@ -48,8 +45,8 @@ class MultithreadedTest {
 
         val (filenames,seed) = generateRandomDatafiles(prefix)
 
-        val naive = IndexBuilderNaive(n).with(filenames).buildFuture().get()
-        val naiveParallel = IndexBuilderParallel(n).with(filenames).buildFuture().get()
+        val naive = IndexBuilderNaive(n).with(filenames).buildAsync().await()
+        val naiveParallel = IndexBuilderParallel(n).with(filenames).buildAsync().await()
 
         assert(compareResults(naive, "naive", naiveParallel, "parallel", seed)) {"Both index implementations are expected to yield the same results for seed $seed"}
     }
@@ -60,8 +57,8 @@ class MultithreadedTest {
 
         val (filenames,seed) = generateRandomDatafiles(prefix)
 
-        val naive = IndexBuilderNaive(n).with(filenames).buildFuture().get()
-        val naiveParallel = IndexBuilderParallel(n).with(filenames).buildFuture().get()
+        val naive = IndexBuilderNaive(n).with(filenames).buildAsync().await()
+        val naiveParallel = IndexBuilderParallel(n).with(filenames).buildAsync().await()
 
         withContext(Dispatchers.Default) {
             assert(compareResultsParallel(naive, "naive", naiveParallel, "parallel", seed)) {"Both index implementations are expected to yield the same results for seed $seed"}
@@ -74,7 +71,7 @@ class MultithreadedTest {
 
         val (filenames,seed) = generateRandomDatafiles(prefix)
 
-        val naive = IndexBuilderNaive(n).with(filenames).buildFuture().get()
+        val naive = IndexBuilderNaive(n).with(filenames).buildAsync().await()
         val naiveCoroutines = IndexBuilderCoroutines(n).with(filenames).buildAsync().await()
 
         withContext(Dispatchers.Default) {
@@ -88,7 +85,7 @@ class MultithreadedTest {
 
         val (filenames,seed) = generateRandomDatafiles(prefix)
 
-        val naive = IndexBuilderNaive(n).with(filenames).buildFuture().get()
+        val naive = IndexBuilderNaive(n).with(filenames).buildAsync().await()
         val naiveCoroutines = IndexBuilderCoroutines(n).with(filenames).buildAsync().await()
 
         withContext(Dispatchers.Default) {
@@ -101,7 +98,7 @@ class MultithreadedTest {
         assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
 
         val (filenames,seed) = generateRandomDatafiles(prefix)
-        val naive = IndexBuilderNaive(n).with(filenames).buildFuture().get()
+        val naive = IndexBuilderNaive(n).with(filenames).buildAsync().await()
 
         withContext(Dispatchers.Default) {
             assert(compareResultsParallel(naive, "naive", naive, "same naive", seed)) {"We expect a single instance to yield the same results for seed $seed"}
@@ -113,7 +110,7 @@ class MultithreadedTest {
         assert(n < maxQuerySize) { "n-gram indices don't support queries of less than n symbols" }
 
         val (filenames, seed) = generateRandomDatafiles(prefix)
-        val naive = IndexBuilderNaive(n).with(filenames).buildFuture().get()
+        val naive = IndexBuilderNaive(n).with(filenames).buildAsync().await()
 
         val queryResults: HashMap<String, Pair<IndexEntry, Stats>> =
             hashMapOf()
@@ -143,8 +140,26 @@ class MultithreadedTest {
         }
     }
 
-    private suspend fun assertIndexNotReadyYet(indexBuilderCoroutines: IndexBuilderCoroutines) {
-        assertThrows<UninitializedPropertyAccessException>("we expect index builder to be in initial state") { indexBuilderCoroutines.get() }
+    @Test
+    fun userCanCancelDeferred() = runBlocking {
+        assert(n < maxQuerySize) {"n-gram indices don't support queries of less than n symbols"}
+
+        val (filenames, _) = generateRandomDatafiles(prefix)
+
+        val indexBuilderCoroutines = IndexBuilderCoroutines(n).with(filenames)
+        val coroutinesDeferred = indexBuilderCoroutines.buildAsync()
+
+        assertIndexNotReadyYet(indexBuilderCoroutines)
+
+        coroutinesDeferred.cancel("Test cancellation")
+
+        assertThrows<CancellationException>(" Canceled deferred should throw on await ") { coroutinesDeferred.await() }
+        assertIndexNotReadyYet(indexBuilderCoroutines)
+    }
+
+
+    private fun assertIndexNotReadyYet(indexBuilder: IndexBuilder) {
+        assert (indexBuilder.get() == EmptyIndex) {"we expect index builder to be in initial state"}
     }
 
     @RepeatedTest(fuzzyTestIterations)

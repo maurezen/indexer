@@ -1,8 +1,7 @@
 package org.maurezen.indexer.impl.naive
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
 import org.maurezen.indexer.*
 import org.maurezen.indexer.impl.ACCEPTS_EVERYTHING
 import org.maurezen.indexer.impl.FileReaderBasic
@@ -11,14 +10,12 @@ import org.maurezen.indexer.impl.explodeFileRoots
 import org.maurezen.indexer.impl.inspection.YesMan
 import org.maurezen.indexer.impl.mergeMapBitMap
 import java.io.FileFilter
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Future
 
 const val DEFAULT_NGRAM_ARITY = 3
 
 open class IndexBuilderNaive (
     override val n: Int = DEFAULT_NGRAM_ARITY
-) : IndexUpdater {
+) : IndexBuilder {
 
     @Volatile
     var currentIndex: Index = EmptyIndex
@@ -54,12 +51,10 @@ open class IndexBuilderNaive (
     }
 
     override fun buildAsync(): Deferred<Index> {
-        return GlobalScope.async {
-            buildFuture().get()
-        }
+        return CompletableDeferred(build())
     }
 
-    override suspend fun buildFuture(): Future<Index> {
+    private fun build(): Index {
         currentIndex = if (roots.isNotEmpty()) {
             val filenames = explodeFileRoots(roots)
             val fileMaps = filenames.mapIndexedTo(ArrayList()) { index, filename -> Pair(reverseNgramsForFile(filename,
@@ -75,28 +70,14 @@ open class IndexBuilderNaive (
             IndexNaive(n, hashMapOf(), arrayListOf(), reader)
         }
 
-        return CompletableFuture.completedFuture(currentIndex)
-    }
-
-    override suspend fun update() {
-        buildAsync().await()
+        return currentIndex
     }
 
     protected fun currentIndexInitialized() = currentIndex != EmptyIndex
 
-
-    override suspend fun get(): Index {
+    override fun get(): Index {
         return currentIndex
     }
-
-    override fun cancelUpdate() {
-        //nothing to be done here, update is a synchronous call for a single-threaded implementation
-    }
-
-    /**
-     * Returns true if and only if an update is in progress at the moment.
-     */
-    protected open fun updateInProgress(): Boolean = false
 
 }
 
