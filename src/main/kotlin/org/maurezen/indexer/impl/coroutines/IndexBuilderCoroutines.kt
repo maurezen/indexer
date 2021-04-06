@@ -7,8 +7,6 @@ import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
 import org.maurezen.indexer.impl.multithreaded.IndexBuilderParallel
 import org.maurezen.indexer.impl.naive.DEFAULT_NGRAM_ARITY
 import org.maurezen.indexer.impl.naive.IndexNaive
-import java.util.concurrent.Future
-import java.util.concurrent.FutureTask
 
 class IndexBuilderCoroutines (
     override val n: Int = DEFAULT_NGRAM_ARITY
@@ -17,29 +15,25 @@ class IndexBuilderCoroutines (
     @Volatile
     private lateinit var currentUpdate: Deferred<Index>
 
-    override fun cancelActually() {
-        currentUpdate.cancel("User-requested cancellation")
-    }
-
     @Synchronized
     override fun buildAsync(): Deferred<Index> {
+        if (updateNotInProgress) {
+            var matches: HashMap<String, IndexEntryInternal>
 
-        advanceStateToBuild()
+            currentUpdate = GlobalScope.async {
 
-        var matches: HashMap<String, IndexEntryInternal>
+                val filenames = explodeFileRoots(roots, filter)
+                val fileMaps = reverseNGramsForFilesCoroutine(this, filenames)
+                matches = coalesceReverseNgramsCoroutines(fileMaps)
 
-        currentUpdate = GlobalScope.async {
+                val newIndex = IndexNaive(n, matches, filenames, reader)
 
-            val filenames = explodeFileRoots(roots, filter)
-            val fileMaps = reverseNGramsForFilesCoroutine(this, filenames)
-            matches = coalesceReverseNgramsCoroutines(fileMaps)
-
-            val newIndex = IndexNaive(n, matches, filenames, reader)
-            advanceStateFromBuild()
-            currentIndex = newIndex
-            currentIndex
+                updateNotInProgress = true
+                currentIndex = newIndex
+                currentIndex
+            }
+            updateNotInProgress = false
         }
-
         return currentUpdate
     }
 
@@ -59,8 +53,4 @@ class IndexBuilderCoroutines (
         return coalesceReverseNgrams(fileMaps)
     }
 
-    @Synchronized
-    override suspend fun buildFuture(): Future<Index> {
-        return FutureTask { runBlocking { buildAsync().await() } }
-    }
 }

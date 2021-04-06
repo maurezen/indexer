@@ -19,6 +19,11 @@ interface IndexBuilder {
     val n: Int
 
     /**
+     * Returns a currently available index.
+     */
+    fun get(): Index
+
+    /**
      * Adds filename to this index content root set
      */
     fun with(filename: String): IndexBuilder
@@ -56,13 +61,9 @@ interface IndexBuilder {
      * A deferred-based flavor of indexing.
      *
      * While indexing is in progress, a previously available index is returned on each query.
+     *
+     * To cancel indexing, call cancel on the deferred.
      */
     fun buildAsync(): Deferred<Index>
 
-    /**
-     * A future-based flavor of indexing.
-     *
-     * While indexing is in progress, a previously available index is returned on each query.
-     */
-    suspend fun buildFuture(): Future<Index>
 }

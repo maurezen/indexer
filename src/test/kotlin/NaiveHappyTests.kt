@@ -54,15 +54,15 @@ class NaiveHappyTests {
     }
 
     private fun readAndIndexTestFile(): Index = runBlocking {
-        IndexBuilderNaive(3).with(filename).buildFuture().get()
+        IndexBuilderNaive(3).with(filename).buildAsync().await()
     }
 
     private fun readAndIndexTestFiles(): Index = runBlocking {
-        IndexBuilderNaive(n).with(readTestFiles().keys).buildFuture().get()
+        IndexBuilderNaive(n).with(readTestFiles().keys).buildAsync().await()
     }
 
-    private fun readAndIndexTestFilesMultithreaded(): Future<Index> = runBlocking {
-        IndexBuilderParallel(n).with(readTestFiles().keys).buildFuture()
+    private fun readAndIndexTestFilesMultithreaded(): Index = runBlocking {
+        IndexBuilderParallel(n).with(readTestFiles().keys).buildAsync().await()
     }
 
     private fun readAndIndexTestFilesCoroutines(): Index = runBlocking {
@@ -143,7 +143,7 @@ class NaiveHappyTests {
 
     @Test
     fun readsTwoFilesAndBuildsIndicesMultithreadedAndLookups() {
-        val index = readAndIndexTestFilesMultithreaded().get()
+        val index = readAndIndexTestFilesMultithreaded()
 
         println(index.stats())
 
