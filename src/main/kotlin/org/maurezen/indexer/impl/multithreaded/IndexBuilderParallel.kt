@@ -1,8 +1,6 @@
 package org.maurezen.indexer.impl.multithreaded
 
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
+import kotlinx.coroutines.*
 import org.maurezen.indexer.Index
 import org.maurezen.indexer.impl.NGram.Companion.reverseNgramsForFile
 import org.maurezen.indexer.impl.explodeFileRoots
@@ -32,7 +30,7 @@ open class IndexBuilderParallel (
 
     @Synchronized
     override fun buildAsync(): Deferred<Index> {
-        return GlobalScope.async {
+        return GlobalScope.async(Dispatchers.IO) {
             build().get()
         }
     }

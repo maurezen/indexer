@@ -24,7 +24,7 @@ class IndexBuilderCoroutines (
 
                 val filenames = explodeFileRoots(roots, filter)
                 val fileMaps = reverseNGramsForFilesCoroutine(this, filenames)
-                matches = coalesceReverseNgramsCoroutines(fileMaps)
+                matches = coalesceReverseNgrams(fileMaps)
 
                 val newIndex = IndexNaive(n, matches, filenames, reader)
 
@@ -47,10 +47,6 @@ class IndexBuilderCoroutines (
             scope.async { reverseNgramsForFile(it, index, n, inspector, reader) }
         }
         jobs.awaitAll()
-    }
-
-    private fun coalesceReverseNgramsCoroutines(fileMaps: List<HashMap<String, IndexEntry>>): HashMap<String, IndexEntry> {
-        return coalesceReverseNgrams(fileMaps)
     }
 
 }
