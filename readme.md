@@ -27,9 +27,16 @@ val richEntry = index.queryAndScan("lorem ipsum")
 
 to update the index
 ```kotlin
+val indexBuilder = IndexBuilderCoroutines()
+    .with(dirName)
+
+var index = indexBuilder.buildAsync.await()
+
+// something something something
+
 runBlocking {
     //update is a suspend fun. Control flow is completely up to you.
-    index.update()
+    index = indexBuilder.update()
 }
 ```
 
@@ -102,7 +109,7 @@ val indexBuilder = IndexBuilderCoroutines()
 
 var indexDeferred = indexBuilder.buildAsync()
 
-indexBuilder.cancel()
+indexDeferred.cancel()
 ```
 
 ### Performance
