@@ -86,9 +86,8 @@ class IndexNaive (
 
         val linesMax = 42
 
-        val entriesTotal = matches.values
-            .flatten()
-            .size
+        val entriesTotal = matches.values.map(IndexEntryInternal::cardinality)
+            .sum()
         val entriesPerNGramMax = matches.values
             .map(IndexEntryInternal::cardinality)
             .maxOrNull() ?: 0

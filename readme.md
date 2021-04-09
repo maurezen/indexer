@@ -127,9 +127,10 @@ IndexBuilderCoroutines()
     .filter(ACCEPTS_EVERYTHING)
     .buildAsync().await()
 ```
-```
-.../dev/intellij-community-master/ indexed in 26704.4382 ms
-```
 
-While, again, a robust memory footprint measurement doesn't exist, a heap dump of a vm after indexing fits in ~260Mb. The indexing process itself, though, requires ~12G.
+|-Xmx|Time|
+|----|----|
+|12g |26.7s|
+|2g  |41.3s|
 
+While, again, a robust memory footprint measurement doesn't exist, a ready-to-query index of `intellij-community-master` has a memory footprint of ~230Mb. The indexing process itself, though, requires anywhere from 12Gb to as little as 1Gb, depending on indexing pipeline settings and trading throughput for memory footprint.
