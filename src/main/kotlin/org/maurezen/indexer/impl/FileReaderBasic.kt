@@ -5,40 +5,41 @@ import java.io.File
 import java.io.FileFilter
 
 // @TODO CRLF files read at LF or CR systems and vice versa
-val defaultEOL: CharSequence = "\n"
+val defaultEOL: String = System.lineSeparator()
 
 val ACCEPTS_EVERYTHING = FileFilter { true }
 
 class FileReaderBasic: FileReader {
 
+    private val logger = logger()
+
     /**
      * Returns a sequence of lines of this file without pulling the whole thing into memory. Assumes the file exists.
      * For the moment assumes UTF-8
      */
-    override fun read(filename: String): Sequence<String> = File(filename).useLines { it }
+    override fun <T> readAnd(filename: String, block: (Sequence<String>) -> T): T = File(filename).useLines { block(it) }
 
-    /**
-     * Pulls the whole file into memory. Assumes the file exists.
-     * For the moment assumes UTF-8.
-     */
-    override fun readAsList(filename: String): List<String> = File(filename).useLines { it.toList() }
-}
+    override fun explodeFileRoots(roots: List<String>, filter: FileFilter): ArrayList<String> {
+        val files = arrayListOf<String>()
+        val filterOrDirectory = FileFilter { file -> (file != null && file.isDirectory) || filter.accept(file) }
+        val fileQueue = ArrayDeque<String>()
+        fileQueue.addAll(roots)
+        //@todo handle symlinks (and use Files.walk in general)
+        while (!fileQueue.isEmpty()) {
+            val file = File(fileQueue.removeFirst())
 
-fun explodeFileRoots(roots: List<String>, filter: FileFilter = ACCEPTS_EVERYTHING): ArrayList<String> {
-    val files = arrayListOf<String>()
-    val filterOrDirectory = FileFilter { file -> (file != null && file.isDirectory) || filter.accept(file) }
-    val fileQueue = ArrayDeque<String>()
-    fileQueue.addAll(roots)
-    //@todo handle symlinks (and use Files.walk in general)
-    while (!fileQueue.isEmpty()) {
-        val file = File(fileQueue.removeFirst())
-
-        if (file.isDirectory) {
-            fileQueue.addAll(file.listFiles(filterOrDirectory).map(File::getAbsolutePath))
-        } else if (filterOrDirectory.accept(file)) {
-            files.add(file.absolutePath.intern())
+            if (file.isDirectory) {
+                val list = file.listFiles(filterOrDirectory)
+                if (list != null) {
+                    fileQueue.addAll(list.map(File::getAbsolutePath))
+                } else {
+                    logger.error("Got `null` instead of directory listing for $file, skipping")
+                }
+            } else if (filterOrDirectory.accept(file)) {
+                files.add(file.absolutePath.intern())
+            }
         }
-    }
 
-    return files
+        return files
+    }
 }

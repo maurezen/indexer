@@ -66,29 +66,14 @@ class IndexNaive (
         return result
     }
 
-    private fun scan(filename: String, query: String, eol: CharSequence = defaultEOL): Map<Int, List<Int>> {
-        val strings = getFileContents(filename)
-
-        var line = 0
-        var offset = 0
-
-        val result: HashMap<Int, MutableList<Int>> = linkedMapOf()
-
-        strings.joinToString(defaultEOL).indicesOf(query).forEach {
-            while (it - offset > strings[line].length) {
-                offset += strings[line++].length + eol.length
-            }
-            result.computeIfAbsent(line) { mutableListOf() }
-            result[line]!!.add(it-offset)
-        }
-
-        return result
+    private fun scan(filename: String, query: String, eol: String = defaultEOL): Map<Int, List<Int>> {
+        return getFileContentsAnd(filename) { it.join(eol).indicesOf(query) }
     }
 
     @Synchronized
     //TODO make file scans multithreaded-environment-friendly
     //TODO cache file scans
-    private fun getFileContents(filename: String) = reader.readAsList(filename)
+    private fun <T> getFileContentsAnd(filename: String, block: (Sequence<String>) -> T) = reader.readAnd(filename, block)
 
     private fun buildStats(): Stats {
         val ngrams = matches.keys.size

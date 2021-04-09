@@ -12,9 +12,10 @@ class NGram {
          * Splits a given string into an n-gram list.
          *
          * E.g. ngram("foobar", 3) -> ("foo", "oob", "oba", "bar")
+         *
+         * Given the use case of splitting the query pattern to ngrams doesn't really care about sequence implementation.
          */
         fun ngram(string: String, n: Int): List<String> {
-            //We have a sliding window, neat.
             return string.windowed(n)
         }
 
@@ -27,32 +28,35 @@ class NGram {
          * (While I fail to imagine a valid use case for a pattern containing an end of line symbol, this needs to be accounted for
          * to eliminate incorrect cross-line matches)
          */
-        fun ngram(strings: List<String>, n: Int, eol: CharSequence = defaultEOL): List<String> {
+        fun ngram(strings: List<String>, n: Int, eol: String = defaultEOL): List<String> {
             //@todo implement multiline windowed to produce a bit less garbage
             return ngram(strings.joinToString(separator = eol), n)
+        }
+
+        fun ngram(strings: Sequence<String>, n: Int, eol: String = defaultEOL): List<String> {
+            //@todo joinToString is terminal, kinda undermines the whole idea
+            return ngram(strings.joinToString(separator = eol), n)
+        }
+
+        fun ngramReverse(strings: Iterable<String>, n: Int, inspector: ContentInspector, filename: String, eol: String = defaultEOL): HashSet<String> {
+            return ngramReverse(strings.asSequence(), n, inspector, filename, eol)
         }
 
         /**
          * Splits a list of strings into an ngram collection, being aware of line numbers in the process*
          */
-        fun ngramReverse(strings: List<String>, n: Int, inspector: ContentInspector, filename: String, eol: CharSequence = defaultEOL): HashSet<String> {
+        fun ngramReverse(strings: Sequence<String>, n: Int, inspector: ContentInspector, filename: String, eol: String = defaultEOL): HashSet<String> {
             val result = hashSetOf<String>()
 
             var line = 0
-            var offset = 0
 
-            //@todo implement multiline windowed to produce a bit less garbage
-            strings.joinToString(eol).windowed(n).forEach { ngram: String ->
+            strings.join(eol).windowedChars(n).forEach { ngram: String ->
                 val intern = ngram.intern()
 
                 if (inspector.proceedOnNGram(intern, line, filename)) {
                     result.add(intern)
 
-                    offset++
-                    //at strings.size it points at exactly the line break, and we're pegging that as belonging to the same string
-                    //note that [line] is perfectly valid because windowed ends at last full ngram
-                    if (offset > strings[line].length) {
-                        offset = 0
+                    if (ngram.endsWith(eol)) {
                         line++
                     }
                 } else {
@@ -84,13 +88,13 @@ class NGram {
             val matches: HashMap<String, IndexEntryInternal> = hashMapOf()
 
             if (inspector.proceedOnFile(filename)) {
-                val strings = reader.readAsList(filename)
+                reader.readAnd(filename) { strings ->
+                    val ngrams = ngramReverse(strings, n, inspector, filename)
 
-                val ngrams = ngramReverse(strings, n, inspector, filename)
-
-                for (ngram in ngrams) {
-                    matches.computeIfAbsent(ngram) { IndexEntryInternal() }
-                    matches[ngram]!!.set(targetIndex)
+                    for (ngram in ngrams) {
+                        matches.computeIfAbsent(ngram) { IndexEntryInternal() }
+                        matches[ngram]!!.set(targetIndex)
+                    }
                 }
             } else {
                 logger.warn("Undesirable file $filename detected, skipping")

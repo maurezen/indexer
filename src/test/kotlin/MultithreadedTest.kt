@@ -2,6 +2,7 @@ import kotlinx.coroutines.*
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.maurezen.indexer.*
@@ -26,6 +27,9 @@ private const val fuzzyTestIterations = 20
 private const val fuzzyQueries = 100000
 
 private const val prefix = "MultithreadedTestFile"
+
+private const val IDEA_IS_HERE = "ORG_MAUREZEN_INDEXER_IDEA_FOLDER_PRESENT"
+private const val IDEA_PATH = "ORG_MAUREZEN_INDEXER_IDEA_PATH"
 
 class MultithreadedTest {
 
@@ -135,9 +139,54 @@ class MultithreadedTest {
                 val secondPass = naive.query(it)
                 assert(queryResults[it]!!.first == secondPass) { "We expect both passes to yield similar results for seed $seed and query $it; got \n${queryResults[it]!!.first}\n for the first pass and \n$secondPass\n for the second pass instead" }
                 assert(queryResults[it]!!.second == secondPass.buildStats()) { "We expect both passes to yield results with similar stats for seed $seed and query $it; got \n${queryResults[it]!!.second}\n and \n${secondPass.buildStats()}\n instead (results seem to be similar: \n$secondPass\n)" }
-
             }
         }
+    }
+
+    @RepeatedTest(fuzzyTestIterations)
+    fun windowedWorksCorrectlyOnSequences() {
+        val (filenames, seed) = generateRandomDatafiles(prefix)
+
+        readFilesAndCompareWindowed(filenames, seed, true)
+    }
+
+    @Test
+    @EnabledIfEnvironmentVariable(named = IDEA_IS_HERE, matches = "true")
+    fun windowedWorksCorrectlyOnIdeaSource() {
+        val ideaPath = System.getenv().get(IDEA_PATH)!!
+
+        val filenames = reader.explodeFileRoots(listOf(ideaPath))
+
+        MultithreadedTest().readFilesAndCompareWindowed(filenames, 42, printFilenames = true)
+    }
+
+    private fun readFilesAndCompareWindowed(filenames: Iterable<String>, seed: Int, printContents: Boolean = false, printFilenames: Boolean = true) {
+        val reader = FileReaderBasic()
+
+        filenames.forEach { filename ->
+            if (printFilenames) println(filename)
+            readFileAndCompareWindowed(reader, filename, seed, printContents)
+        }
+    }
+
+    private fun readFileAndCompareWindowed(
+        reader: FileReaderBasic,
+        filename: String,
+        seed: Int,
+        printContents: Boolean = false
+    ) {
+        val joinToString = mutableListOf<String>()
+        val fileContentsSingleString = reader.readAsList(filename).joinToString(separator = defaultEOL)
+
+        fileContentsSingleString.windowed(3).forEach { joinToString.add(it) }
+        val windowedChars = mutableListOf<String>()
+
+        reader.readAnd(filename) { strings ->
+            strings.join(defaultEOL).windowedChars(3).forEach { windowedChars.add(it) }
+        }
+
+        assert (windowedChars == joinToString) {
+            "Different results for different windowing methods\nSeed: $seed filename: $filename\n" + (if (printContents) "File contents:\n$fileContentsSingleString" else "")}
     }
 
     @Test
