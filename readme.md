@@ -1,5 +1,10 @@
 ### What
 A basic (text) file indexer library in Kotlin. Given a character sequence, an indexer finds all the occurrences of this sequence as a substring in a given set of files. Primary use case is indexing a moderately-sized codebase for subsequent searches.
+
+### How to build
+
+`gradle(w) clean shadowJar kotlinSourcesJar`
+Place `indexer-$version-all.jar` somewhere on your classpath. Point your IDE towards `indexer-$version-sources.jar` if needed.
  
 ### How to use
 
