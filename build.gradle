@@ -1,9 +1,10 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.4.21'
+    id "com.github.johnrengelman.shadow" version "6.1.0"
 }
 
 group 'org.maurezen.indexer'
-version '1.0-SNAPSHOT'
+version '0.5.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -30,7 +31,6 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect"
 
     implementation "com.googlecode.javaewah:JavaEWAH:${ewahVersion}"
-    implementation 'io.honeycomb.beeline:beeline-core:1.5.0'
 
     implementation "org.apache.logging.log4j:log4j-api:${log4jVersion}"
     implementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
@@ -49,9 +49,21 @@ compileTestKotlin {
 }
 
 test {
-
     environment "ORG_MAUREZEN_INDEXER_IDEA_FOLDER_PRESENT", intellijFolder.exists()
     environment "ORG_MAUREZEN_INDEXER_IDEA_PATH", intellijFolder
     maxHeapSize = isCiServer ? "6g" : "32g"
     useJUnitPlatform()
+}
+
+jar {
+    manifest {
+        attributes 'Implementation-Title': 'indexer'
+    }
+
+    from { configurations.compile.collect {it.isDirectory() ? it : zipTree(it) } }
+}
+
+shadowJar {
+    archiveBaseName.set(project.name)
+    archiveVersion.set(project.version.toString())
 }
