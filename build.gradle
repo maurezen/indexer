@@ -8,7 +8,6 @@ version '1.0-SNAPSHOT'
 repositories {
     mavenCentral()
     google()
-    maven { url 'https://jitpack.io' }
 }
 
 ext {
@@ -20,6 +19,9 @@ ext {
     log4jVersion = '2.14.1'
 
     isCiServer = System.getenv().containsKey("CI")
+
+    intellijFolderName = "intellij-community-master"
+    intellijFolder = new File(projectDir.parent, intellijFolderName)
 }
 
 dependencies {
@@ -47,6 +49,9 @@ compileTestKotlin {
 }
 
 test {
+
+    environment "ORG_MAUREZEN_INDEXER_IDEA_FOLDER_PRESENT", intellijFolder.exists()
+    environment "ORG_MAUREZEN_INDEXER_IDEA_PATH", intellijFolder
     maxHeapSize = isCiServer ? "6g" : "32g"
     useJUnitPlatform()
 }

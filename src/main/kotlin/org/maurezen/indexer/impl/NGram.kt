@@ -3,7 +3,6 @@ package org.maurezen.indexer.impl
 import org.maurezen.indexer.ContentInspector
 import org.maurezen.indexer.FileReader
 import org.maurezen.indexer.impl.inspection.YesMan
-import java.lang.Exception
 
 class NGram {
     companion object {
@@ -13,9 +12,10 @@ class NGram {
          * Splits a given string into an n-gram list.
          *
          * E.g. ngram("foobar", 3) -> ("foo", "oob", "oba", "bar")
+         *
+         * Given the use case of splitting the query pattern to ngrams doesn't really care about sequence implementation.
          */
         fun ngram(string: String, n: Int): List<String> {
-            //We have a sliding window, neat.
             return string.windowed(n)
         }
 
@@ -28,31 +28,29 @@ class NGram {
          * (While I fail to imagine a valid use case for a pattern containing an end of line symbol, this needs to be accounted for
          * to eliminate incorrect cross-line matches)
          */
-        fun ngram(strings: List<String>, n: Int, eol: CharSequence = defaultEOL): List<String> {
+        fun ngram(strings: List<String>, n: Int, eol: String = defaultEOL): List<String> {
             //@todo implement multiline windowed to produce a bit less garbage
             return ngram(strings.joinToString(separator = eol), n)
         }
 
-        fun ngram(strings: Sequence<String>, n: Int, eol: CharSequence = defaultEOL): List<String> {
+        fun ngram(strings: Sequence<String>, n: Int, eol: String = defaultEOL): List<String> {
             //@todo joinToString is terminal, kinda undermines the whole idea
             return ngram(strings.joinToString(separator = eol), n)
         }
 
-        fun ngramReverse(strings: Iterable<String>, n: Int, inspector: ContentInspector, filename: String, eol: CharSequence = defaultEOL): HashSet<String> {
+        fun ngramReverse(strings: Iterable<String>, n: Int, inspector: ContentInspector, filename: String, eol: String = defaultEOL): HashSet<String> {
             return ngramReverse(strings.asSequence(), n, inspector, filename, eol)
         }
 
         /**
          * Splits a list of strings into an ngram collection, being aware of line numbers in the process*
          */
-        fun ngramReverse(strings: Sequence<String>, n: Int, inspector: ContentInspector, filename: String, eol: CharSequence = defaultEOL): HashSet<String> {
+        fun ngramReverse(strings: Sequence<String>, n: Int, inspector: ContentInspector, filename: String, eol: String = defaultEOL): HashSet<String> {
             val result = hashSetOf<String>()
 
             var line = 0
 
-            //@todo joinToString is terminal, kinda undermines the whole idea.
-            //we have join working on sequences, gotta implement windowed and we're golden
-            strings.joinToString(eol).windowed(n).forEach { ngram: String ->
+            strings.join(eol).windowedChars(n).forEach { ngram: String ->
                 val intern = ngram.intern()
 
                 if (inspector.proceedOnNGram(intern, line, filename)) {

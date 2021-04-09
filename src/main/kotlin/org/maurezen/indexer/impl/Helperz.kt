@@ -3,7 +3,6 @@ package org.maurezen.indexer.impl
 import com.googlecode.javaewah32.EWAHCompressedBitmap32
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.concurrent.ConcurrentHashMap
 
 //a set of filenames
 typealias IndexEntry = HashSet<String>
@@ -60,6 +59,17 @@ fun <T> Sequence<T>.mixin(other: Sequence<T>): Sequence<T> {
 }
 
 /**
+ * An equivalent of String.windowed(Int, Int) applicable to a sequence of strings instead, running without slurping the
+ * whole thing in memory.
+ *
+ * Is absolutely NOT THREAD SAFE.
+ */
+fun Sequence<String>.windowedChars(size: Int, step: Int = 1): Sequence<String> {
+
+    return Sequence { CrossSequenceWindowedCharIterator(size, step, iterator()) }
+}
+
+/**
  * Returns a sequence that inserts a separator between each two consecutive elements of this sequence
  *
  * The operation is _intermediate_
@@ -108,7 +118,7 @@ fun Sequence<String>.indicesOf(substring: String, eol: String = defaultEOL): Map
     //map line -> pair -> offset for the start of the match, remaining length
     var tentative: Map<Int, Pair<Int, Int>> = linkedMapOf()
 
-    var current = ""
+    var current: String
     var line = 0
 
     do {
@@ -204,9 +214,11 @@ const val alphabetCyrillic = "абвгдеёжзийклмнопрстуфхцч
 const val numbers = "0123456789"
 const val symbols = "~!@#$%^&*()_+-=,./?\\[]{}';\":|<>`"
 const val extraSymbols = "©⋯–…’"
-const val newline = "\n"
+const val newlineLinux = "\n"
+const val newLineWindows = "\r\n"
+const val newLineMacOld = "\r"
 const val whitespace = "\t "
 val alphabet = alphabetBase + alphabetBase.toUpperCase() + alphabetCyrillic + alphabetCyrillic.toUpperCase()
 val alphanumeric = alphabet + numbers
 val alphabetExtendedSansNewline = alphanumeric + symbols + whitespace
-val alphabetExtended = alphabetExtendedSansNewline + newline + extraSymbols
+val alphabetExtended = alphabetExtendedSansNewline + newlineLinux + newLineWindows + newLineMacOld + defaultEOL + extraSymbols
