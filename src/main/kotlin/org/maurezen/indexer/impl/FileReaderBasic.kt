@@ -1,8 +1,10 @@
 package org.maurezen.indexer.impl
 
+import arrow.core.Either
 import org.maurezen.indexer.FileReader
 import java.io.File
 import java.io.FileFilter
+import java.io.FileNotFoundException
 
 // @TODO CRLF files read at LF or CR systems and vice versa
 val defaultEOL: String = System.lineSeparator()
@@ -17,7 +19,15 @@ class FileReaderBasic: FileReader {
      * Returns a sequence of lines of this file without pulling the whole thing into memory. Assumes the file exists.
      * For the moment assumes UTF-8
      */
-    override fun <T> readAnd(filename: String, block: (Sequence<String>) -> T): T = File(filename).useLines { block(it) }
+    override fun <T> readAnd(filename: String, block: (Sequence<String>) -> T): Either<Unit, T> {
+        return try {
+            Either.Right(File(filename).useLines { block(it) })
+        } catch (e: FileNotFoundException) {
+            logger.error("Couldn't open file $filename, skipping")
+            logger.debug("Couldn't open file $filename, skipping", e)
+            Either.Left(Unit)
+        }
+    }
 
     override fun explodeFileRoots(roots: List<String>, filter: FileFilter): ArrayList<String> {
         val files = arrayListOf<String>()

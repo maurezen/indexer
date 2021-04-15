@@ -170,6 +170,24 @@ fun String.indicesOf(substring: String): MutableList<Int> {
     return result
 }
 
+inline fun <K, V> Iterable<K>.associateWithNotNull(valueSelector: (K) -> V?): Map<K, V> {
+    //@todo investigate @PublishedApi usage issues - should be able to use mapCapacity and collectionSizeOrDefault here
+    //  val result = LinkedHashMap<K, V>(mapCapacity(collectionSizeOrDefault(10)).coerceAtLeast(16))
+    val size = if (this is Collection) size else 10
+    val result = LinkedHashMap<K, V>(((size / 0.75F) + 1.0F).toInt().coerceAtLeast(16))
+    return associateWithNotNullTo(result, valueSelector)
+}
+
+inline fun <K, V, M : MutableMap<in K, in V>> Iterable<K>.associateWithNotNullTo(destination: M, valueSelector: (K) -> V?): M {
+    for (element in this) {
+        val value = valueSelector(element)
+        if (null != value) {
+            destination.put(element, value)
+        }
+    }
+    return destination
+}
+
 
 @Suppress("unused")
 //grabbed from https://www.reddit.com/r/Kotlin/comments/8gbiul/slf4j_loggers_in_3_ways/
