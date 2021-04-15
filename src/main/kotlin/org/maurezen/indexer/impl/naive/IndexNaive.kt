@@ -67,7 +67,7 @@ class IndexNaive (
     }
 
     private fun scan(filename: String, query: String, eol: String = defaultEOL): Map<Int, List<Int>> {
-        return getFileContentsAnd(filename) { it.join(eol).indicesOf(query) }
+        return getFileContentsAnd(filename) { it.join(eol).indicesOf(query) }.fold( { emptyMap() }, { it })
     }
 
     @Synchronized

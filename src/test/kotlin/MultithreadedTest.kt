@@ -1,3 +1,4 @@
+import arrow.core.Either
 import kotlinx.coroutines.*
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
@@ -12,6 +13,7 @@ import org.maurezen.indexer.impl.multithreaded.IndexBuilderParallel
 import org.maurezen.indexer.impl.naive.IndexBuilderNaive
 import org.maurezen.indexer.impl.naive.buildStats
 import java.io.File
+import java.io.FileFilter
 import java.lang.String.format
 import java.nio.file.Files
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -114,32 +116,16 @@ class MultithreadedTest {
         assert(n < maxQuerySize) { "n-gram indices don't support queries of less than n symbols" }
 
         val (filenames, seed) = generateRandomDatafiles(prefix)
-        val naive = IndexBuilderNaive(n).with(filenames).buildAsync().await()
+        val index = IndexBuilderNaive(n).with(filenames).buildAsync().await()
 
-        val queryResults: HashMap<String, Pair<IndexEntry, Stats>> =
-            hashMapOf()
-        val resultsQueue = ConcurrentLinkedQueue<Pair<String, Pair<IndexEntry, Stats>>>()
+        val firstPassResults = queryRandomly(index).associateBy({ it.first }, { it.second })
 
-        //using runBlocking for barrier synchronization
-        runBlocking(Dispatchers.Default) {
-            repeat(fuzzyQueries) {
-                launch {
-                    val random = ThreadLocalRandom.current()!!
-                    val query = generateRandomQuery(random.nextInt(n + 1, maxQuerySize + 1), random)
-                    val queryResult = naive.query(query)
-                    resultsQueue.add(Pair(query, Pair(queryResult, queryResult.buildStats())))
-                }
-            }
-        }
-        resultsQueue.forEach { queryResults[it.first] = it.second }
-        runBlocking(Dispatchers.Default) {
-            val percentageThreshold = 0.98
-            assert(queryResults.keys.size > percentageThreshold * fuzzyQueries) { "We expect a high percentage of unique queries, got just ${queryResults.keys.size} out of $fuzzyQueries attempts which is lower than expected $percentageThreshold" }
-            coroutinize(queryResults.keys) {
-                val secondPass = naive.query(it)
-                assert(queryResults[it]!!.first == secondPass) { "We expect both passes to yield similar results for seed $seed and query $it; got \n${queryResults[it]!!.first}\n for the first pass and \n$secondPass\n for the second pass instead" }
-                assert(queryResults[it]!!.second == secondPass.buildStats()) { "We expect both passes to yield results with similar stats for seed $seed and query $it; got \n${queryResults[it]!!.second}\n and \n${secondPass.buildStats()}\n instead (results seem to be similar: \n$secondPass\n)" }
-            }
+        val percentageThreshold = 0.98
+        assert(firstPassResults.keys.size > percentageThreshold * fuzzyQueries) { "We expect a high percentage of unique queries, got just ${firstPassResults.keys.size} out of $fuzzyQueries attempts which is lower than expected $percentageThreshold" }
+
+        queryDeterministically(index, firstPassResults.keys) { query, secondPass ->
+            assert(firstPassResults[query]!!.first == secondPass) { "We expect both passes to yield similar results for seed $seed and query $query; got \n${firstPassResults[query]!!.first}\n for the first pass and \n$secondPass\n for the second pass instead" }
+            assert(firstPassResults[query]!!.second == secondPass.buildStats()) { "We expect both passes to yield results with similar stats for seed $seed and query $query; got \n${firstPassResults[query]!!.second}\n and \n${secondPass.buildStats()}\n instead (results seem to be similar: \n$secondPass\n)" }
         }
     }
 
@@ -176,7 +162,7 @@ class MultithreadedTest {
         printContents: Boolean = false
     ) {
         val joinToString = mutableListOf<String>()
-        val fileContentsSingleString = reader.readAsList(filename).joinToString(separator = defaultEOL)
+        val fileContentsSingleString = readLinesNotExpectingIssues(reader, filename).joinToString(defaultEOL)
 
         fileContentsSingleString.windowed(3).forEach { joinToString.add(it) }
         val windowedChars = mutableListOf<String>()
@@ -238,6 +224,83 @@ class MultithreadedTest {
         compareRandomDatafilesForSeed("generateDataFilesInADirIsDeterministicBasedOnSeed", seed)
     }
 
+    @Test
+    fun indexerHandlesFileDisappearanceResilientlyOnQuery() = runBlocking {
+        val prefix = "indexerHandlesFileDisappearanceResilientlyOnQuery"
+
+        val (filenames, seed) = generateRandomDatafiles(prefix)
+        val filenameToDisappear = filenames.random()
+
+        val index = IndexBuilderCoroutines(n).with(filenames).buildAsync().await()
+
+        val firstPassResults = queryRandomly(index).associateBy({ it.first }, { it.second })
+
+        assert(File(filenameToDisappear).delete()) { "We expect we're able to delete one of our temporary test files $filenameToDisappear" }
+
+        queryDeterministically(index, firstPassResults.keys) { query, secondPass ->
+            val firstPass = firstPassResults[query]!!.first
+            firstPass.remove(filenameToDisappear)
+
+            assert(secondPass[filenameToDisappear]?.isEmpty() ?: true) { "We expect the results of the second pass to not contain anything regarding removed file $filenameToDisappear" }
+
+            secondPass.remove(filenameToDisappear)
+            assert(firstPass == secondPass) { "We expect the results to be identical except the part corresponding to the missing file $filenameToDisappear for seed $seed and query $query; got \n${firstPassResults[query]!!.first}\n for the first pass and \n$secondPass\n for the second pass instead" }
+        }
+    }
+
+    private fun queryDeterministically(index: Index, queries: Iterable<String>, consumer: (String, RichIndexEntry) -> Unit) = runBlocking(Dispatchers.Default) {
+        coroutinize(queries) { consumer.invoke(it, index.queryAndScan(it)) }
+    }
+
+    private fun queryRandomly(index: Index) = runBlocking(Dispatchers.Default) {
+        val resultsQueue = ConcurrentLinkedQueue<Pair<String, Pair<RichIndexEntry, Stats>>>()
+        repeat(fuzzyQueries) {
+            launch {
+                val random = ThreadLocalRandom.current()!!
+                val query = generateRandomQuery(random.nextInt(n + 1, maxQuerySize + 1), random)
+                val queryResult = index.queryAndScan(query)
+                resultsQueue.add(Pair(query, Pair(queryResult, queryResult.buildStats())))
+            }
+        }
+        resultsQueue
+    }
+
+    @Test
+    fun indexerHandlesFileDisappearanceResilientlyWhileIndexing() = runBlocking {
+        val prefix = "indexerHandlesFileDisappearanceResilientlyWhileIndexing"
+
+        val (filenames, seed) = generateRandomDatafiles(prefix)
+        val filenameToDisappear = filenames.random()
+
+        val deletingFileReader = object : FileReader {
+            val actualReader = FileReaderBasic()
+
+            override fun <T> readAnd(filename: String, block: (Sequence<String>) -> T): Either<Unit, T> {
+                return actualReader.readAnd(filename, block)
+            }
+
+            override fun explodeFileRoots(roots: List<String>, filter: FileFilter): ArrayList<String> {
+                val fileList = actualReader.explodeFileRoots(roots, filter)
+                assert(File(filenameToDisappear).delete()) { "We expect we're able to delete one of our temporary test files $filenameToDisappear" }
+                return fileList
+            }
+        }
+
+        val index = IndexBuilderCoroutines(n).with(filenames).readBy(deletingFileReader).buildAsync().await()
+
+        val firstPassResults = queryRandomly(index).associateBy({ it.first }, { it.second })
+
+        queryDeterministically(index, firstPassResults.keys) { query, secondPass ->
+            val firstPass = firstPassResults[query]!!.first
+            firstPass.remove(filenameToDisappear)
+
+            assert(secondPass[filenameToDisappear]?.isEmpty() ?: true) { "We expect the results of the second pass to not contain anything regarding removed file $filenameToDisappear" }
+
+            secondPass.remove(filenameToDisappear)
+            assert(firstPass == secondPass) { "We expect the results to be identical except the part corresponding to the missing file $filenameToDisappear for seed $seed and query $query; got \n${firstPassResults[query]!!.first}\n for the first pass and \n$secondPass\n for the second pass instead" }
+        }
+    }
+
     @RepeatedTest(fuzzyTestIterations)
     fun generatesIdenticalStringsForIdenticalSeeds() {
         val seed = Random.nextInt()
@@ -294,8 +357,8 @@ class MultithreadedTest {
         firstFiles.zip(secondFiles).forEach {
             assert( it.first.length() == it.second.length()) { "For seed $seed we expect \n${it.first.absolutePath}\n and \n${it.second.absolutePath}\n have equal size, got ${it.first.length()} and ${it.second.length()} instead. \n Overall, we have file sizes (in bytes) as follows: \n${firstFiles.map(File::length)}\n for the first set and \n${secondFiles.map(File::length)}\n for the second set" }
 
-            val firstLines = reader.readAsList(it.first.absolutePath)
-            val secondLines = reader.readAsList(it.second.absolutePath)
+            val firstLines = readLinesNotExpectingIssues(reader, it.first.absolutePath)
+            val secondLines = readLinesNotExpectingIssues(reader, it.second.absolutePath)
 
             assert(firstLines.size == secondLines.size) { "For seed $seed we expect \n${it.first.absolutePath}\n and \n${it.second.absolutePath}\n have equal amount of lines, got ${firstLines.size} and ${secondLines.size} instead. \n Overall, we have file sizes (in lines) as follows: \n${firstFiles.map(File::lines)}\n for the first set and \n${secondFiles.map(File::lines)}\n for the second set" }
             assert(firstLines == secondLines) {"For seed $seed we expect \n${it.first.absolutePath}\n and \n${it.second.absolutePath}\n have equal contents, got \n${firstLines.joinToString("\n")}\nand\n${secondLines.joinToString("\n")}\ninstead"}

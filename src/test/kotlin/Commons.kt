@@ -1,4 +1,6 @@
+import org.maurezen.indexer.FileReader
 import org.maurezen.indexer.impl.FileReaderBasic
+import org.maurezen.indexer.impl.defaultEOL
 import java.io.File
 
 class Locator {}
@@ -22,8 +24,18 @@ fun printStrings(list: List<String>) {
 val reader = FileReaderBasic()
 fun <T> readTestFile(block: (Sequence<String>) -> T) = reader.readAnd(filename, block)
 fun <T> readTestFiles(block: (Sequence<String>) -> T) = reader.readAnd(filenames, block)
-fun readTestBinaryFile() = reader.readAsList(binaryFilename)
+fun readTestBinaryFile() = readLinesNotExpectingIssues(reader, binaryFilename)
 
 fun File.lines(): Int {
-    return reader.readAsList(absolutePath).size
+    return reader.readAsList(absolutePath).fold({ 0}, { it.size})
 }
+
+fun readLinesNotExpectingIssues(reader: FileReader, filename: String)
+    = reader
+        .readAsList(filename)
+        .fold(
+            {
+                assert(false) { "We expect no issues with reading test files" }
+                emptyList()
+            },
+            { it })

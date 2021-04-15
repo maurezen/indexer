@@ -18,6 +18,7 @@ ext {
     kotlinVersion = '1.4.31'
     kotlinCoroutinesVersion = '1.4.3'
     log4jVersion = '2.14.1'
+    arrow_version = '0.13.1'
 
     isCiServer = System.getenv().containsKey("CI")
 
@@ -35,6 +36,8 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-api:${log4jVersion}"
     implementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
     implementation "org.apache.logging.log4j:log4j-slf4j-impl:${log4jVersion}"
+
+    implementation "io.arrow-kt:arrow-core:${arrow_version}"
 
     testImplementation platform("org.junit:junit-bom:${junitVersion}")
     testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
